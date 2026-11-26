@@ -1,3 +1,6 @@
+> [!NOTE]
+> **Community fork.** This repository is maintained on top of [xiufengsun/TokenTracker](https://github.com/xiufengsun/TokenTracker) (MIT). It syncs upstream **every week**, so it stays within a week of official releases, and adds community improvements on top — starting with switching the cloud backend (official / self-hosted) from Settings. It is not an official release. See [FORK.md](./FORK.md) for what differs and how it is maintained.
+
 <div align="center">
 
 # Token Tracker

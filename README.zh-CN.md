@@ -1,3 +1,6 @@
+> [!NOTE]
+> **社区维护分支。** 本仓库基于 [xiufengsun/TokenTracker](https://github.com/xiufengsun/TokenTracker) 维护（MIT 协议），**每周同步一次上游**，和官方版本的差距不超过一周；同时在上游基础上合入社区改进，目前已包含：在设置里切换云端后端（官方云 / 自部署）。本仓库不是官方发布版本。和上游的差异清单、维护方式见 [FORK.md](./FORK.md)。
+
  <div align="center">
 
 # Token Tracker
