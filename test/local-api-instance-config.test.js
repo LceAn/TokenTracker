@@ -251,3 +251,66 @@ test("restoring the official cloud overrides a custom environment base URL", asy
     delete process.env.TOKENTRACKER_INSFORGE_BASE_URL;
   }
 });
+
+test("POST instance-test requires auth and a valid URL", async () => {
+  const queuePath = setupQueue();
+  const handler = freshHandler(queuePath);
+
+  const denied = await call(handler, {
+    method: "POST",
+    endpoint: "/functions/tokentracker-instance-test",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ baseUrl: SELF_HOSTED_URL }),
+  });
+  assert.equal(denied.statusCode, 401);
+
+  const token = await authToken(handler);
+  const bad = await call(handler, {
+    method: "POST",
+    endpoint: "/functions/tokentracker-instance-test",
+    headers: { "content-type": "application/json", "x-tokentracker-local-auth": token },
+    body: JSON.stringify({ baseUrl: "not-a-url" }),
+  });
+  assert.equal(bad.statusCode, 400);
+  assert.equal(bad.json().error, "invalid_instance_url");
+});
+
+test("POST instance-test reports reachability without insisting on a 2xx", async (t) => {
+  const queuePath = setupQueue();
+  const handler = freshHandler(queuePath);
+  const token = await authToken(handler);
+
+  // Probe outcomes are stubbed: CI must not depend on the public cloud being
+  // reachable. A 404 still proves the address is routable (the official
+  // cloud's root answers 404), and a rejected fetch models DNS failure.
+  const realFetch = global.fetch;
+  t.after(() => { global.fetch = realFetch; });
+  global.fetch = async (target) => {
+    if (String(target) === "https://srctyff5.us-east.insforge.app") {
+      return { ok: false, status: 404 };
+    }
+    throw new Error("getaddrinfo ENOTFOUND instance.unreachable.invalid");
+  };
+
+  const probe = (baseUrl) =>
+    call(handler, {
+      method: "POST",
+      endpoint: "/functions/tokentracker-instance-test",
+      headers: { "content-type": "application/json", "x-tokentracker-local-auth": token },
+      body: JSON.stringify({ baseUrl }),
+    });
+
+  const reachable = await probe("https://srctyff5.us-east.insforge.app");
+  assert.equal(reachable.statusCode, 200);
+  const body = reachable.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.reachable, true);
+  assert.equal(body.status, 404);
+
+  const unreachable = await probe("https://instance.unreachable.invalid");
+  assert.equal(unreachable.statusCode, 200);
+  const down = unreachable.json();
+  assert.equal(down.ok, true);
+  assert.equal(down.reachable, false);
+  assert.equal(typeof down.error, "string");
+});

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Loader2, Server } from "lucide-react";
 import { copy } from "../../lib/copy";
 import { resetInsforgeClientForInstanceChange } from "../../lib/insforge-config";
@@ -24,19 +24,25 @@ function errorMessage(error) {
  * nothing to reconfigure.
  */
 export function InstanceSectionCard() {
-  const { available, loading, config, save } = useInstanceSettings();
+  const { available, loading, config, save, test } = useInstanceSettings();
   const [baseUrl, setBaseUrl] = useState("");
   const [anonKey, setAnonKey] = useState("");
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [applied, setApplied] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  // Live mirror of the effective probe target (field value or official URL):
+  // async completions compare against this instead of the render-time closure.
+  const currentTargetRef = useRef("");
 
   useEffect(() => {
     if (!available) return;
     setBaseUrl(config.custom ? config.baseUrl : "");
+    currentTargetRef.current = config.custom ? config.baseUrl : config.officialUrl;
     setAnonKey("");
-  }, [available, config.baseUrl, config.custom]);
+  }, [available, config.baseUrl, config.custom, config.officialUrl]);
 
   // A pending availability check is not the same as an unavailable API: show
   // the card's loading line while the probe is in flight so Settings does not
@@ -57,6 +63,7 @@ export function InstanceSectionCard() {
   const persist = async (payload) => {
     setBusy(true);
     setError(null);
+    setTestResult(null);
     try {
       await save(payload);
       setApplied(true);
@@ -67,6 +74,25 @@ export function InstanceSectionCard() {
     } catch (reason) {
       setError(errorMessage(reason));
       setBusy(false);
+    }
+  };
+
+  const runTest = async () => {
+    const target = baseUrl.trim() || config.officialUrl;
+    currentTargetRef.current = target;
+    setTesting(true);
+    setTestResult(null);
+    setError(null);
+    try {
+      const result = await test(target);
+      // Discard a result that no longer matches the field: the closure's
+      // baseUrl is stale after the await, so compare against a ref that the
+      // input's onChange keeps current.
+      if (currentTargetRef.current === target) setTestResult(result);
+    } catch (reason) {
+      if (currentTargetRef.current === target) setError(errorMessage(reason));
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -124,7 +150,14 @@ export function InstanceSectionCard() {
             <input
               type="url"
               value={baseUrl}
-              onChange={(event) => setBaseUrl(event.target.value)}
+              onChange={(event) => {
+                setBaseUrl(event.target.value);
+                // An edited address invalidates any earlier probe result, and
+                // in-flight completions compare against this ref, not the
+                // stale closure value.
+                currentTargetRef.current = event.target.value.trim() || config.officialUrl;
+                setTestResult(null);
+              }}
               placeholder={config.officialUrl}
               spellCheck={false}
               autoComplete="off"
@@ -165,6 +198,21 @@ export function InstanceSectionCard() {
                 copy("settings.instance.action.save")
               )}
             </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={testing || busy || applied}
+              onClick={runTest}
+            >
+              {testing ? (
+                <>
+                  <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden />
+                  {copy("settings.instance.testing")}
+                </>
+              ) : (
+                copy("settings.instance.action.test")
+              )}
+            </Button>
             {config.custom ? (
               <Button
                 size="sm"
@@ -182,6 +230,7 @@ export function InstanceSectionCard() {
               onClick={() => {
                 setEditing(false);
                 setError(null);
+                setTestResult(null);
                 setBaseUrl(config.custom ? config.baseUrl : "");
                 setAnonKey("");
               }}
@@ -190,6 +239,18 @@ export function InstanceSectionCard() {
             </Button>
           </div>
         </div>
+      ) : null}
+      {testResult ? (
+        <p
+          role="status"
+          className={`pb-3 text-xs ${testResult.reachable ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
+        >
+          {testResult.reachable
+            ? copy("settings.instance.test.ok", { status: testResult.status ?? "—" })
+            : testResult.error === "certificate"
+              ? copy("settings.instance.test.certificate")
+              : copy("settings.instance.test.unreachable")}
+        </p>
       ) : null}
       {applied ? (
         <p role="status" className="pb-3 text-xs text-oai-gray-500 dark:text-oai-gray-400">
