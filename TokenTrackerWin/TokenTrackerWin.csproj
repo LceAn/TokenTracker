@@ -32,6 +32,9 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
+  <!-- Community-fork build identity (see ForkBuild.props). -->
+  <Import Project="ForkBuild.props" />
+
   <ItemGroup>
     <!-- Floating 1.0.* so restore picks the latest Evergreen-compatible runtime loader. -->
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
