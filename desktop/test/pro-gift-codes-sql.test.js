@@ -24,7 +24,7 @@ test('operator-generated codes cross the real HTTP/SQL contract and redeem once 
       '20261007130000_cloud-waffo-retry.sql','20261007140000_cloud-waffo-attempts.sql',
       '20261007150000_cloud-waffo-authorizations.sql','20261007160000_cloud-waffo-sandbox-periods.sql',
       '20261008120000_self-hosted-access.sql','20261009120000_cloud-gifts.sql']) {
-      await db.exec(await fs.readFile(path.join(__dirname,'../migrations',name),'utf8'));
+      await db.exec(await fs.readFile(path.join(__dirname,'../../server/migrations',name),'utf8'));
     }
     await db.exec("UPDATE tokentracker_cloud_policy SET phase='active',launch_at=now()-interval '1 hour' WHERE environment='sandbox'");
     server = createServer(async (req, res) => {

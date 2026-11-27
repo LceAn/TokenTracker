@@ -11,6 +11,8 @@ const SQL_PATH = path.join(__dirname, "..", "scripts", "ops", "user-badges.sql")
 const MIGRATION_PATH = path.join(
   __dirname,
   "..",
+  "..",
+  "server",
   "migrations",
   "20260714081616_add-achievement-issue-numbers.sql",
 );
@@ -107,7 +109,7 @@ test("refresh claims the shared lock and reads the rollup + live tail", () => {
 
 test("maintained-rollup migration matches the canonical refresh and stays privileged", () => {
   const migration = fs.readFileSync(path.join(__dirname,
-    "../migrations/20261012120001_refresh-badges-from-maintained-rollup.sql"), "utf8");
+    "../../server/migrations/20261012120001_refresh-badges-from-maintained-rollup.sql"), "utf8");
   const refresh = /CREATE OR REPLACE FUNCTION public\.user_badges_refresh_v2\(\)[\s\S]*?\$func\$;/;
   assert.equal(migration.match(refresh)?.[0], sql.match(refresh)?.[0]);
   assert.match(migration, /REVOKE EXECUTE ON FUNCTION public\.user_badges_refresh_v2\(\) FROM anon, authenticated, PUBLIC/);

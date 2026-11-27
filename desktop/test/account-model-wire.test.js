@@ -124,7 +124,7 @@ for (const endpoint of ["heatmap", "daily"]) {
 }
 
 test("the migration adds only invoker wrappers restricted to the existing edge role", () => {
-  const sql = fs.readFileSync(path.join(__dirname, "..", "migrations", "20261002090000_compact-account-model-wire.sql"), "utf8");
+  const sql = fs.readFileSync(path.join(__dirname, "..", "..", "server", "migrations", "20261002090000_compact-account-model-wire.sql"), "utf8");
   assert.equal(sql.match(/CREATE OR REPLACE FUNCTION/g).length, 2);
   assert.equal(sql.match(/SECURITY INVOKER/g).length, 2);
   assert.doesNotMatch(sql, /SECURITY DEFINER|ALTER TABLE|DROP\s|CREATE OR REPLACE FUNCTION public\.account_(heatmap|daily)_compact\(/);

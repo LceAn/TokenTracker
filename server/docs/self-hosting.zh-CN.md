@@ -18,11 +18,11 @@
 
 ## 哪些代码已经开源
 
-仓库包含客户端、后端 TypeScript 和 SQL 源码。`17247d9d` 的历史清单为 23 个后端入口和 33 个迁移；应按所选发行 commit 重新清点，不能当作当前数量。[MIT 许可](../LICENSE)允许使用和修改这些代码。文件已公开，不等于线上部署的每份脚本都与仓库完全一致。
+仓库包含客户端、后端 TypeScript 和 SQL 源码。`17247d9d` 的历史清单为 23 个后端入口和 33 个迁移；应按所选发行 commit 重新清点，不能当作当前数量。[MIT 许可](../../LICENSE)允许使用和修改这些代码。文件已公开，不等于线上部署的每份脚本都与仓库完全一致。
 
 历史迁移是现有数据库上的增量改动，部分文件还包含特定用户群的运营处理或数据修复。**不要在新数据库上直接执行全部历史迁移。** 使用[干净的私有后端安装器](self-hosting-backend.md)。`--sql` 输出带 PostgreSQL 事务的独立文件；`--migration` 由已连接 InsForge 实例的迁移 API 提供事务。
 
-订阅、设备权限、赠送和归档工作保存在 `feat/cloud-subscriptions`，尚未作为收费 Pro 正式发布。干净的私有基础 schema、官方本地 Linux 平台和标准 Dashboard A→C→A 切换已有验收记录；公网 VPS HTTPS 和受支持的原生路由仍需验证。[源码清单与缺口](self-hosting-status.md) · [上线前交接总表](cloud-release-readiness.md)
+订阅、设备权限、赠送和归档工作保存在 `feat/cloud-subscriptions`，尚未作为收费 Pro 正式发布。干净的私有基础 schema、官方本地 Linux 平台和标准 Dashboard A→C→A 切换已有验收记录；公网 VPS HTTPS 和受支持的原生路由仍需验证。[源码清单与缺口](self-hosting-status.md) · [上线前交接总表](../../desktop/docs/cloud-release-readiness.md)
 
 ## 准备 VPS
 
@@ -38,10 +38,10 @@ API 和管理入口通过 HTTPS 代理与访问控制提供服务，不直接对
 
 ## 安装应用
 
-本地分支已提供 `scripts/self-host/` 干净的私有后端安装器和 14 个函数的部署清单。按[后端安装指南](self-hosting-backend.md)执行；实际平台与 VPS 验收仍须单独完成，不能由本地 SQL 测试代替。
+本地分支已提供 `server/self-host/` 干净的私有后端安装器和 14 个函数的部署清单。按[后端安装指南](self-hosting-backend.md)执行；实际平台与 VPS 验收仍须单独完成，不能由本地 SQL 测试代替。
 
 1. 安装经过审查的应用表、RPC、索引、触发器、RLS 和权限。核对所选 InsForge 版本的服务端角色、登录角色和匿名角色，不把生产用户、token、订单或封禁记录当作初始化数据。
-2. 用 `node scripts/self-host/build-functions.cjs` 构建私有后端，通过自有实例的管理接口部署清单中的 14 个函数。包含设备授权、签发、用量写入、改名、账户读取和免费实例设置，不包含公共社区及支付回调。相对导入已打包，SDK 版本固定。
+2. 用 `node server/self-host/build-functions.cjs` 构建私有后端，通过自有实例的管理接口部署清单中的 14 个函数。包含设备授权、签发、用量写入、改名、账户读取和免费实例设置，不包含公共社区及支付回调。相对导入已打包，SDK 版本固定。
 3. 为函数提供服务端 `INSFORGE_BASE_URL`、`INSFORGE_SERVICE_ROLE_KEY`，以及对应的 `INSFORGE_ANON_KEY`/`ANON_KEY`、`JWT_SECRET` 或 `JWT_PUBLIC_KEY`。实际验证用户 JWT 和服务端数据库权限，不假设自部署的 `ACCESS_API_KEY` 可以直接替换所有现有 edge token。
 4. 在自己的实例配置登录方式、会话 cookie、允许访问的来源与回调地址。OAuth 需要自己的应用注册和回调地址，浏览器、CLI 和桌面回调分别验证。若所选登录方式需要发验证邮件或重置邮件，还需配置邮件服务。
 5. 将 Web 仪表盘编译到自己的 API 与匿名 key，并提供前端路由回退。自己的域名要能访问 `/device` 和桌面回调页面，逐条核对登录和用量请求的真实目标。
@@ -64,7 +64,7 @@ VITE_INSFORGE_ANON_KEY=your-instance-public-anon-key
 
 CLI 本地 HTML 在应用模块前同步加载 `/api/runtime-config.js`。公开 descriptor 包含最终 `baseUrl`、`anonKey`、`dashboardUrl` 和可选 `configurationError`，优先于编译时默认值，不含设备 JWT 或服务端凭证。登录自定义实例时会显示目标 host，避免将官方密码误填给另一台服务器。
 
-CLI 支持 `TOKENTRACKER_INSFORGE_BASE_URL`、`TOKENTRACKER_INSFORGE_ANON_KEY`、`TOKENTRACKER_DASHBOARD_URL` 和持久化配置。配置后应核对实际 descriptor 及请求目标。[运行配置](../src/lib/runtime-config.js)、[本地 API](../src/lib/local-api.js)、[前端配置](../dashboard/src/lib/insforge-config.ts)。
+CLI 支持 `TOKENTRACKER_INSFORGE_BASE_URL`、`TOKENTRACKER_INSFORGE_ANON_KEY`、`TOKENTRACKER_DASHBOARD_URL` 和持久化配置。配置后应核对实际 descriptor 及请求目标。[运行配置](../../desktop/src/lib/runtime-config.js)、[本地 API](../../desktop/src/lib/local-api.js)、[前端配置](../../desktop/dashboard/src/lib/insforge-config.ts)。
 
 前端 SDK 单例绑定服务地址与公开 key。`resetInsforgeClientForInstanceChange()` 清理 SDK 内存会话和 auth/PKCE 命名空间，发出 `tt.insforgeInstanceChanged`，由账号层清理账户缓存和云同步 capability。provider 偏好与本地用量保留，订单恢复和提醒关闭记录按实例、账号分开。新实例需要重新登录，旧 SDK 不能向新实例提供 bearer token。
 
@@ -91,7 +91,7 @@ CLI 支持 `TOKENTRACKER_INSFORGE_BASE_URL`、`TOKENTRACKER_INSFORGE_ANON_KEY`�
 
 将数据库、文件存储、部署配置、加密密钥和签名密钥备份到私人恢复位置，备份与 VPS 分开保存，并测试恢复。数据库和文件备份要对应同一应用与 schema 版本。
 
-只安装经过审查且有执行上限的定时任务，保留失败记录。归档先通过数据一致性、并发和恢复验收，再启用数据搬迁任务。容器正常运行不代表聚合、修复和备份任务都执行成功。[归档启用条件](cloud-usage-archive.md)
+只安装经过审查且有执行上限的定时任务，保留失败记录。归档先通过数据一致性、并发和恢复验收，再启用数据搬迁任务。容器正常运行不代表聚合、修复和备份任务都执行成功。[归档启用条件](../../desktop/docs/cloud-usage-archive.md)
 
 升级前记录应用 commit、InsForge 版本和镜像 digest、schema 版本与函数源码。先备份，按明确的升级清单变更，验证客户端和 API 契约，保留兼容的回滚方式。升级 InsForge 时也要检查认证、存储和函数运行时变化。
 

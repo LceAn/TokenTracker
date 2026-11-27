@@ -6,6 +6,7 @@ const path = require("node:path");
 const WORKFLOW_PATH = path.join(
   __dirname,
   "..",
+  "..",
   ".github",
   "workflows",
   "release-windows.yml"
@@ -269,6 +270,7 @@ test("bundled Chinese language files exist as UTF-8 with BOM", () => {
 
 const DMG_WORKFLOW_PATH = path.join(
   __dirname,
+  "..",
   "..",
   ".github",
   "workflows",

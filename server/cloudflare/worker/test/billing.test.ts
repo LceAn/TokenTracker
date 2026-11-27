@@ -9,7 +9,7 @@ import { claimGift } from "../src/billing-gifts";
 import { receiveWaffoWebhook } from "../src/billing";
 import { readMembership } from "../src/billing-membership";
 import { waffoLedger } from "../src/billing-ledger";
-import type { WaffoConfig } from "../../../dashboard/edge-patches/cloud/waffo";
+import type { WaffoConfig } from "../../../../desktop/dashboard/edge-patches/cloud/waffo";
 
 const order = {
   id: "00000000-0000-4000-8000-000000000001",

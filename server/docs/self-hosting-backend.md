@@ -2,7 +2,7 @@
 
 The local branch now contains a clean TokenTracker application installer and a private-function deployment manifest. They install free private synchronization on a compatible InsForge instance. They do not create the InsForge platform or complete VPS, browser, or packaged desktop acceptance.
 
-Reconciled on 2026-10-09. The current manifest has 14 application steps, including the gift schema needed by the shared billing handler; self-hosted gifts and paid checkout remain unavailable. The official-stack 13-step results below are historical, while the gift-stage 14-step installer/reinstall results used a separate isolated PostgreSQL database. Neither unchanged reinstall is proof of an upgrade from 13 to 14 steps. See the [release handoff](cloud-release-readiness.md) and [remaining acceptance](self-hosting-remaining-acceptance.md) for current gates.
+Reconciled on 2026-10-09. The current manifest has 14 application steps, including the gift schema needed by the shared billing handler; self-hosted gifts and paid checkout remain unavailable. The official-stack 13-step results below are historical, while the gift-stage 14-step installer/reinstall results used a separate isolated PostgreSQL database. Neither unchanged reinstall is proof of an upgrade from 13 to 14 steps. See the [release handoff](../../desktop/docs/cloud-release-readiness.md) and [remaining acceptance](self-hosting-remaining-acceptance.md) for current gates.
 
 InsForge provides its own PostgreSQL/auth/API/function runtime. Install it in a separate directory using a reviewed release and pinned image digests. Its official README documents MCP support for self-hosted administration; the cloud CLI is not a VPS installer. [Official platform instructions](https://github.com/InsForge/InsForge#self-hosted-docker-compose)
 
@@ -17,7 +17,7 @@ Run the installer as the database owner in a new application database. It refuse
 Run from the reviewed application checkout after `npm ci` and the dashboard dependencies are installed:
 
 ```sh
-node scripts/self-host/install.cjs --sql /absolute/private/path/tokentracker-install.sql
+node server/self-host/install.cjs --sql /absolute/private/path/tokentracker-install.sql
 ```
 
 Review the generated SQL and the target connection. On the self-hosted server, execute the complete file in one transaction with the selected database's PostgreSQL client:
@@ -31,7 +31,7 @@ The generated file contains its own transaction and advisory installation lock. 
 For a CLI-linked InsForge instance, use the platform migration mode. The ordinary SQL API rejects explicit `BEGIN`/`COMMIT`; the migration API supplies the transaction:
 
 ```sh
-node scripts/self-host/install.cjs --migration /absolute/private/context/migrations/20261008190000_tokentracker-self-host.sql
+node server/self-host/install.cjs --migration /absolute/private/context/migrations/20261008190000_tokentracker-self-host.sql
 cd /absolute/private/context
 npx -y @insforge/cli@0.2.8 current --json
 npx -y @insforge/cli@0.2.8 db migrations up --all --yes --json
@@ -54,7 +54,7 @@ A valid existing account receives private read/upload access without orders or a
 ## Build the private functions
 
 ```sh
-node scripts/self-host/build-functions.cjs /absolute/private/path/tokentracker-functions
+node server/self-host/build-functions.cjs /absolute/private/path/tokentracker-functions
 ```
 
 Deploy every entry in the generated `functions.json` through the self-hosted platform's reviewed management interface. The 14 entries include device authorization/grant/poll/token issuance/rename, ingestion, seven account reads, and the account/device billing API. Relative local imports are bundled. The async CommonJS output supports the official v2.3.3 worker's `new Function` executor; an active ESM deployment can still fail at invocation. InsForge SDK imports are pinned to `1.4.5`, and payment-library dependencies retain the reviewed lockfile versions. Payment webhooks and official public-community functions are excluded.

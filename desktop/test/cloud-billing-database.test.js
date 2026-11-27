@@ -26,14 +26,14 @@ async function financialDatabase(withWaffo = false, withAttempts = false) {
     );
     GRANT SELECT ON public.tokentracker_devices TO project_admin;
   `);
-  await fixture.exec(fs.readFileSync(path.join(__dirname, "../migrations/20261003120000_cloud-subscriptions.sql"), "utf8"));
+  await fixture.exec(fs.readFileSync(path.join(__dirname, "../../server/migrations/20261003120000_cloud-subscriptions.sql"), "utf8"));
   if (withWaffo) {
-    await fixture.exec(fs.readFileSync(path.join(__dirname, "../migrations/20261007120000_cloud-waffo.sql"), "utf8"));
-    await fixture.exec(fs.readFileSync(path.join(__dirname, "../migrations/20261007130000_cloud-waffo-retry.sql"), "utf8"));
+    await fixture.exec(fs.readFileSync(path.join(__dirname, "../../server/migrations/20261007120000_cloud-waffo.sql"), "utf8"));
+    await fixture.exec(fs.readFileSync(path.join(__dirname, "../../server/migrations/20261007130000_cloud-waffo-retry.sql"), "utf8"));
     if (withAttempts) {
-      await fixture.exec(fs.readFileSync(path.join(__dirname, "../migrations/20261007140000_cloud-waffo-attempts.sql"), "utf8"));
-      await fixture.exec(fs.readFileSync(path.join(__dirname, "../migrations/20261106011916_cloud-waffo-unused-checkout-retry.sql"), "utf8"));
-      await fixture.exec(fs.readFileSync(path.join(__dirname, "../migrations/20261106014534_cloud-checkout-recovery.sql"), "utf8"));
+      await fixture.exec(fs.readFileSync(path.join(__dirname, "../../server/migrations/20261007140000_cloud-waffo-attempts.sql"), "utf8"));
+      await fixture.exec(fs.readFileSync(path.join(__dirname, "../../server/migrations/20261106011916_cloud-waffo-unused-checkout-retry.sql"), "utf8"));
+      await fixture.exec(fs.readFileSync(path.join(__dirname, "../../server/migrations/20261106014534_cloud-checkout-recovery.sql"), "utf8"));
     }
   }
   await fixture.exec("UPDATE tokentracker_cloud_policy SET phase='active', launch_at=now() WHERE environment='sandbox'");
@@ -612,7 +612,7 @@ test('Waffo migration changes sellable catalog prices without repricing historic
     const id = randomUUID(); await historical.query('INSERT INTO auth.users VALUES ($1)',[id]);
     const requestId = randomUUID();
     const oldOrder = (await historical.query("SELECT cloud_create_order($1,'sandbox','paddle','cloud_usd_monthly',$2) AS r",[id,requestId])).rows[0].r;
-    await historical.exec(fs.readFileSync(path.join(__dirname,'../migrations/20261007120000_cloud-waffo.sql'),'utf8'));
+    await historical.exec(fs.readFileSync(path.join(__dirname,'../../server/migrations/20261007120000_cloud-waffo.sql'),'utf8'));
     const reused = (await historical.query("SELECT cloud_create_order($1,'sandbox','paddle','cloud_usd_monthly',$2) AS r",[id,requestId])).rows[0].r;
     assert.equal(reused.id,oldOrder.id); assert.equal(reused.amount_cents,599); assert.equal(reused.billing_mode,'recurring');
     assert.equal((await historical.query("SELECT amount_cents FROM tokentracker_cloud_catalog WHERE sku='cloud_usd_monthly'")).rows[0].amount_cents,499);
@@ -1087,7 +1087,7 @@ test('attempt migration backfills existing paid and unpaid attempts without losi
     const failed = await create('cloud_usd_monthly_fixed'); const failedId = 'ORD_historicalFailed';
     const successor = (await historical.query("SELECT cloud_restart_waffo_order($1,'sandbox',$2,$3,$4) AS r",
       [failed.user_id,failed.id,randomUUID(),failedId])).rows[0].r.order;
-    await historical.exec(fs.readFileSync(path.join(__dirname,'../migrations/20261007140000_cloud-waffo-attempts.sql'),'utf8'));
+    await historical.exec(fs.readFileSync(path.join(__dirname,'../../server/migrations/20261007140000_cloud-waffo-attempts.sql'),'utf8'));
     for (const event of [paid,refunded]) {
       const payment = (await historical.query('SELECT * FROM tokentracker_cloud_payments WHERE transaction_id=$1',[event.action_id])).rows[0];
       assert.equal(payment.waffo_order_id,event.waffo_order_id);
@@ -1128,8 +1128,8 @@ test('Waffo complete restart bundles accept paginated cohorts above one hundred 
 test('Waffo sandbox accelerated paid periods preserve exact dates without enabling current uploads, while live geometry stays strict',async()=>{
   const isolated=await financialDatabase(true,true);
   try {
-    await isolated.exec(fs.readFileSync(path.join(__dirname,'../migrations/20261007160000_cloud-waffo-sandbox-periods.sql'),'utf8'));
-    await isolated.exec(fs.readFileSync(path.join(__dirname,'../migrations/20261008120000_self-hosted-access.sql'),'utf8'));
+    await isolated.exec(fs.readFileSync(path.join(__dirname,'../../server/migrations/20261007160000_cloud-waffo-sandbox-periods.sql'),'utf8'));
+    await isolated.exec(fs.readFileSync(path.join(__dirname,'../../server/migrations/20261008120000_self-hosted-access.sql'),'utf8'));
     await isolated.exec("UPDATE tokentracker_cloud_policy SET phase='active',launch_at=clock_timestamp() WHERE environment='live'");
     const create=async environment=>{
       const owner=randomUUID();await isolated.query('INSERT INTO auth.users VALUES($1)',[owner]);
@@ -1170,8 +1170,8 @@ test('Waffo sandbox accelerated paid periods preserve exact dates without enabli
 test('a future payment cannot extend an already-started refunded membership read-only grace',async()=>{
   const isolated=await financialDatabase(true,true);
   try {
-    await isolated.exec(fs.readFileSync(path.join(__dirname,'../migrations/20261007160000_cloud-waffo-sandbox-periods.sql'),'utf8'));
-    await isolated.exec(fs.readFileSync(path.join(__dirname,'../migrations/20261008120000_self-hosted-access.sql'),'utf8'));
+    await isolated.exec(fs.readFileSync(path.join(__dirname,'../../server/migrations/20261007160000_cloud-waffo-sandbox-periods.sql'),'utf8'));
+    await isolated.exec(fs.readFileSync(path.join(__dirname,'../../server/migrations/20261008120000_self-hosted-access.sql'),'utf8'));
     const owner=randomUUID();await isolated.query('INSERT INTO auth.users VALUES($1)',[owner]);
     const o=(await isolated.query("SELECT cloud_create_order($1,'sandbox','waffo','cloud_usd_monthly',$2) AS r",[owner,randomUUID()])).rows[0].r;
     const price='PROD_futureGrace';const external='ORD_futureGrace';

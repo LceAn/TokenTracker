@@ -112,7 +112,7 @@ Pro后端104项目标及6项独立原handler/SDK用例通过。真实账本的�
 
 ## 早期工程验收记录（历史）
 
-真实双实例验收复现了本地认证代理的外部源漏洞，并完成入口修复。5 条实际外源路径均 403，无凭据或允许跨域响应头；合法本地和原生无 Origin 恢复返回 200。原生 OAuth 一次性标记的外源读取也已通过先失败/修复/真实 serve 验证，42 项认证目标和 15 项 serve 目标通过。标准 Dashboard 已验证 A444→C未登录/本地333→C555→A未登录/本地333→A444，两方向旧 JWT 均 409，旧实例远程设备消失。剩余自部署场景见 [验收清单](self-hosting-remaining-acceptance.md)。
+真实双实例验收复现了本地认证代理的外部源漏洞，并完成入口修复。5 条实际外源路径均 403，无凭据或允许跨域响应头；合法本地和原生无 Origin 恢复返回 200。原生 OAuth 一次性标记的外源读取也已通过先失败/修复/真实 serve 验证，42 项认证目标和 15 项 serve 目标通过。标准 Dashboard 已验证 A444→C未登录/本地333→C555→A未登录/本地333→A444，两方向旧 JWT 均 409，旧实例远程设备消失。剩余自部署场景见 [验收清单](../../server/docs/self-hosting-remaining-acceptance.md)。
 
 归档的冷数据修正、有限逻辑备份恢复和受控样本已经在现有后端隔离区验证。正式用户迁移仍须审查部署顺序、备份和运行窗口，当前未启用生产归档或保留计划。Windows 工程本轮已重新接续，新增源码的回归与未完成设备步骤见 [Windows 验收记录](windows-cloud-acceptance.md)。公开 VPS 的 HTTPS/OAuth 与原生路由按各自真实环境证明。托管正式路径和付费限制未启用，也没有正式成本下降的测量证据。
 
@@ -138,4 +138,4 @@ HTTPS QA页的外部协议点击被Browser Use明确拦截，未换工具或命�
 
 不需要自己改代码、提供新恢复环境或另选服务器。工程已沿用原付费 InsForge 完成隔离数据库恢复、正式 handler 替换和正式网页/价格启用，沙盒/live 仍按环境隔离。后续真实交易和原生设备验收由开发侧接续，需本人参与的付款和系统操作如上。Windows 原码生成/resume 为可选管理能力，未验证 NTFS ACL 时关闭，可由 Mac/Linux 安全管理程序代行。
 
-部署与回滚步骤见 [收款运维手册](cloud-billing-operations.md)，自部署实现和剩余门槛见 [后端安装指南](self-hosting-backend.md) 与 [实现状态](self-hosting-status.md)。
+部署与回滚步骤见 [收款运维手册](cloud-billing-operations.md)，自部署实现和剩余门槛见 [后端安装指南](../../server/docs/self-hosting-backend.md) 与 [实现状态](../../server/docs/self-hosting-status.md)。

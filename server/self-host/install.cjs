@@ -74,7 +74,7 @@ async function main() {
   const migration=args[0]==="--migration";
   const flagged=migration||args[0]==="--sql";
   const output=args[flagged?1:0];
-  if(!output||args.length!==(flagged?2:1)||output.startsWith("--"))throw Error("Usage: node scripts/self-host/install.cjs [--sql|--migration] /absolute/path/to/install.sql");
+  if(!output||args.length!==(flagged?2:1)||output.startsWith("--"))throw Error("Usage: node server/self-host/install.cjs [--sql|--migration] /absolute/path/to/install.sql");
   const target=path.resolve(output);
   await fs.writeFile(target,(migration?buildMigrationSql():buildSql())+"\n",{mode:0o600});
   console.log(`Wrote self-host ${migration?"platform migration":"standalone transaction"} SQL to ${target}`);

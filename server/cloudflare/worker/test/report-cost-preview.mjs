@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-const { drainQueueToCloud } = require("../../../src/commands/sync.js");
+const { drainQueueToCloud } = require("../../../../desktop/src/commands/sync.js");
 const base = process.env.TT_QA_BASE_URL;
 assert.equal(
   base,

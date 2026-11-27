@@ -14,8 +14,8 @@ const ERROR_COPY_KEYS = {
 };
 
 const SELF_HOSTING_GUIDE = {
-  chinese: "https://github.com/xiufengsun/TokenTracker/blob/main/docs/self-hosting.zh-CN.md",
-  default: "https://github.com/xiufengsun/TokenTracker/blob/main/docs/self-hosting.md",
+  chinese: "https://github.com/LceAn/TokenTracker/blob/main/server/README.md",
+  default: "https://github.com/LceAn/TokenTracker/blob/main/server/README.en.md",
 };
 
 function selfHostingGuideUrl() {

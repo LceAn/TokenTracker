@@ -198,7 +198,8 @@ test('OpenSquilla failed enqueue must not leave mutated hourly totals', async ()
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opensquilla-fail-enqueue-'));
   const originalAppend = fsp.appendFile;
   const a = path.resolve('CLAUDE.md');
-  const b = path.resolve('README.md');
+  // Any two existing files do; README.md left the package root in this fork.
+  const b = path.resolve('package.json');
   let failAppend = false;
 
   fsp.appendFile = async (...args) => {

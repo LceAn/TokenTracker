@@ -229,7 +229,7 @@ test("summary calendar offsets restore leap days, DST boundaries and a year boun
 });
 
 test("summary/model wire migration only adds invoker wrappers with exact compact delegation and adaptive size choice", () => {
-  const sql = fs.readFileSync(path.join(__dirname, "..", "migrations", "20261003093000_compact-account-summary-model-wire.sql"), "utf8");
+  const sql = fs.readFileSync(path.join(__dirname, "..", "..", "server", "migrations", "20261003093000_compact-account-summary-model-wire.sql"), "utf8");
   assert.equal(sql.match(/CREATE OR REPLACE FUNCTION/g).length, 2);
   assert.equal(sql.match(/SECURITY INVOKER/g).length, 2);
   assert.equal(sql.match(/octet_length\(wire::text\) < octet_length\(raw\.j::text\)/g).length, 2);
@@ -244,7 +244,7 @@ test("summary/model wire migration only adds invoker wrappers with exact compact
 });
 
 test("the conversations follow-up keeps the model breakdown compact/wire contract (#990)", () => {
-  const sql = fs.readFileSync(path.join(__dirname, "..", "migrations", "20261102090000_add-conversations-to-account-model-breakdown-wire.sql"), "utf8");
+  const sql = fs.readFileSync(path.join(__dirname, "..", "..", "server", "migrations", "20261102090000_add-conversations-to-account-model-breakdown-wire.sql"), "utf8");
   assert.equal(sql.match(/CREATE OR REPLACE FUNCTION/g).length, 2);
   assert.equal(sql.match(/SECURITY INVOKER/g).length, 1);
   assert.equal((sql.match(/public\.account_usage_grouped_cached\(/gu) || []).length, 1,

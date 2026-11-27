@@ -21,14 +21,14 @@ pnpm-debug.log*
 
 # Graph tooling (npm run graph:scip / graph:auto-index)
 index.scip
-/index.*.scip
-/graph.plan.json
-/data/graph.sqlite
-/data/graph.sqlite-*
+/desktop/index.*.scip
+/desktop/graph.plan.json
+/desktop/data/graph.sqlite
+/desktop/data/graph.sqlite-*
 
 # Local-only
-/tasks/
-/tmp/
+/desktop/tasks/
+/desktop/tmp/
 .vercel
 
 # TokenTrackerBar build artifacts
@@ -86,10 +86,10 @@ Thumbs.db
 .turbo
 
 # Private launch playbook & growth-strategy docs — never push to remote
-docs/launch/PLAYBOOK.md
-docs/launch/submit-awesome-pr.sh
-docs/launch/2026-07-15-1k-launch-kit.md
-docs/plans/2026-07-15-github-stars-growth-design.md
+desktop/docs/launch/PLAYBOOK.md
+desktop/docs/launch/submit-awesome-pr.sh
+desktop/docs/launch/2026-07-15-1k-launch-kit.md
+desktop/docs/plans/2026-07-15-github-stars-growth-design.md
 
 # Scratch / reference clones (not part of the project)
 scratch/

@@ -16,7 +16,7 @@ test.before(async () => {
     CREATE TABLE tokentracker_user_settings (user_id uuid PRIMARY KEY, leaderboard_anonymous boolean DEFAULT false);
     GRANT SELECT ON tokentracker_devices,tokentracker_user_settings TO project_admin;`);
   for (const name of ["20261003120000_cloud-subscriptions.sql", "20261008150000_cloud-pro-badges.sql"]) {
-    await db.exec(fs.readFileSync(path.join(__dirname, "../migrations", name), "utf8"));
+    await db.exec(fs.readFileSync(path.join(__dirname, "../../server/migrations", name), "utf8"));
   }
   await db.exec("UPDATE tokentracker_cloud_policy SET phase='active',launch_at=now()");
 });

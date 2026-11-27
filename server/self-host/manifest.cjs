@@ -1,7 +1,14 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const root = path.resolve(__dirname,"../..");
+// This folder sits beside the npm package and borrows from it: the reviewed
+// function sources live in that package's dashboard tree (read through `root`
+// and `read`). The migrations it extracts SQL from sit next to this folder,
+// and its own schema scripts sit in it.
+const root = path.resolve(__dirname,"../../desktop");
+const server = path.resolve(__dirname,"..");
 const read = name => fs.readFileSync(path.join(root,name),"utf8");
+const readMigration = name => fs.readFileSync(path.join(server,name),"utf8");
+const readOwn = name => fs.readFileSync(path.join(__dirname,name),"utf8");
 function functionSql(source,name) {
   const matchName = source.match(new RegExp(`CREATE(?: OR REPLACE)? FUNCTION public\\.${name}\\(`));
   const start = matchName?.index ?? -1;
@@ -21,10 +28,10 @@ const privateFunctions = [
   "tokentracker-account-devices","tokentracker-billing",
 ];
 function steps() {
-  const sessions=read("migrations/20260817120000_account-session-states.sql");
-  const concurrent=read("migrations/20260719152022_harden-backend-concurrency.sql");
+  const sessions=readMigration("migrations/20260817120000_account-session-states.sql");
+  const concurrent=readMigration("migrations/20260719152022_harden-backend-concurrency.sql");
   return [
-    {id:"01-private-baseline",sql:read("scripts/self-host/baseline.sql")},
+    {id:"01-private-baseline",sql:readOwn("baseline.sql")},
     {id:"02-account-sessions",sql:sessions.slice(0,sessions.indexOf("-- Leaderboard: account-level sources")) + `
 CREATE TRIGGER self_host_sessions_insert_cache AFTER INSERT ON public.tokentracker_account_session_states
   REFERENCING NEW TABLE AS changed_new FOR EACH STATEMENT EXECUTE FUNCTION public.self_host_invalidate_usage_cache();
@@ -34,24 +41,24 @@ CREATE TRIGGER self_host_sessions_delete_cache AFTER DELETE ON public.tokentrack
   REFERENCING OLD TABLE AS changed_old FOR EACH STATEMENT EXECUTE FUNCTION public.self_host_invalidate_usage_cache();` },
     {id:"03-device-identity",sql:functionSql(concurrent,"refresh_tokentracker_device_identity")},
     {id:"04-private-aggregation",sql:[
-      read("scripts/self-host/aggregation.sql"),
-      functionSql(read("migrations/20260904090000_promote-single-scan-account-usage.sql"),"account_usage_grouped_v2"),
+      readOwn("aggregation.sql"),
+      functionSql(readMigration("migrations/20260904090000_promote-single-scan-account-usage.sql"),"account_usage_grouped_v2"),
       functionSql(concurrent,"account_usage_grouped_cached"),
-      read("migrations/20260918041500_fold-account-summary-and-heatmap-aggregation.sql"),
-      read("migrations/20260918043000_fold-account-model-breakdown-aggregation.sql"),
-      read("migrations/20260918050000_fold-account-daily-aggregation.sql"),
-      read("migrations/20261002090000_compact-account-model-wire.sql"),
-      read("migrations/20261003093000_compact-account-summary-model-wire.sql"),
-      read("scripts/self-host/private-rpc-access.sql"),
+      readMigration("migrations/20260918041500_fold-account-summary-and-heatmap-aggregation.sql"),
+      readMigration("migrations/20260918043000_fold-account-model-breakdown-aggregation.sql"),
+      readMigration("migrations/20260918050000_fold-account-daily-aggregation.sql"),
+      readMigration("migrations/20261002090000_compact-account-model-wire.sql"),
+      readMigration("migrations/20261003093000_compact-account-summary-model-wire.sql"),
+      readOwn("private-rpc-access.sql"),
     ].join("\n\n")},
     ...["20261003120000_cloud-subscriptions.sql","20261004120000_cloud-machine-access.sql",
       "20261007120000_cloud-waffo.sql","20261007130000_cloud-waffo-retry.sql","20261007140000_cloud-waffo-attempts.sql",
       "20261007150000_cloud-waffo-authorizations.sql","20261007160000_cloud-waffo-sandbox-periods.sql"]
-      .map(name=>({id:name.slice(0,-4),sql:read("migrations/"+name)})),
-    {id:"10-self-hosted-policy",sql:read("migrations/20261008120000_self-hosted-access.sql")},
-    {id:"11-token-environment-validation",sql:read("migrations/20261008120001_validate-cloud-token-environment.sql")},
-    {id:"12-pro-gifts",sql:read("migrations/20261009120000_cloud-gifts.sql")},
-    {id:"13-machine-alias-cascade",sql:read("migrations/20261012120000_cloud-machine-alias-cascade.sql")},
+      .map(name=>({id:name.slice(0,-4),sql:readMigration("migrations/"+name)})),
+    {id:"10-self-hosted-policy",sql:readMigration("migrations/20261008120000_self-hosted-access.sql")},
+    {id:"11-token-environment-validation",sql:readMigration("migrations/20261008120001_validate-cloud-token-environment.sql")},
+    {id:"12-pro-gifts",sql:readMigration("migrations/20261009120000_cloud-gifts.sql")},
+    {id:"13-machine-alias-cascade",sql:readMigration("migrations/20261012120000_cloud-machine-alias-cascade.sql")},
   ];
 }
 module.exports={root,read,functionSql,privateFunctions,steps};

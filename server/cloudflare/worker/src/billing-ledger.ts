@@ -5,9 +5,9 @@ import {
   object,
   text,
   type CloudOrder,
-} from "../../../dashboard/edge-patches/cloud/contracts";
-import type { WaffoLedger } from "../../../dashboard/edge-patches/cloud/waffo-reconciliation";
-import type { WaffoPeriod } from "../../../dashboard/edge-patches/cloud/waffo";
+} from "../../../../desktop/dashboard/edge-patches/cloud/contracts";
+import type { WaffoLedger } from "../../../../desktop/dashboard/edge-patches/cloud/waffo-reconciliation";
+import type { WaffoPeriod } from "../../../../desktop/dashboard/edge-patches/cloud/waffo";
 
 type Args = Record<string, unknown>;
 type Session = Pick<D1DatabaseSession, "prepare" | "batch">;

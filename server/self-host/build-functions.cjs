@@ -1,9 +1,11 @@
 const fs=require("node:fs/promises");
 const path=require("node:path");
 const {createRequire}=require("node:module");
-const {build}=require("esbuild");
 const {builtinModules}=require("node:module");
 const {root,privateFunctions}=require("./manifest.cjs");
+// esbuild belongs to the npm package in desktop/, so resolve it from there
+// instead of from this folder.
+const {build}=createRequire(path.join(root,"package.json"))("esbuild");
 async function buildFunctions(directory) {
   await fs.mkdir(directory,{recursive:true});
   const lock=JSON.parse(await fs.readFile(path.join(root,"package-lock.json"),"utf8"));
@@ -79,6 +81,8 @@ async function buildFunctions(directory) {
     const output=await build({entryPoints:[source],write:false,bundle:true,format:"iife",globalName:"__selfHostHandler",
       // The self-host worker serializes responses with text(), including binary gzip.
       define:slug==="tokentracker-account-model-breakdown"?{CompressionStream:"undefined"}:{},
+      // The path comments esbuild writes follow the package root, so the output does not depend on the caller's working directory.
+      absWorkingDir:root,
       platform:"neutral",target:"es2022",plugins:[ownDashboard],logLevel:"silent"});
     if(slug==="tokentracker-billing")runtimeImports.add("node:buffer");
     const imports=Array.from(runtimeImports).sort().map(specifier=>`${JSON.stringify(specifier)}: ${specifier==="node:buffer"

@@ -68,7 +68,7 @@ try {
     Step 'Version'
     $baseVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
     if ($baseVersion -notmatch '^\d+\.\d+\.\d+$') { throw "package.json has no stable x.y.z version: $baseVersion" }
-    if (-not (Test-Path FORK_REVISION)) { throw 'FORK_REVISION is missing from the repository root.' }
+    if (-not (Test-Path FORK_REVISION)) { throw 'FORK_REVISION is missing from desktop/ (the npm package root).' }
     $forkRevision = (Get-Content FORK_REVISION -Raw).Trim()
     if ($forkRevision -notmatch '^\d+$') { throw "FORK_REVISION must be a number, found '$forkRevision'." }
     $forkVersion = "$baseVersion-fork.$forkRevision"

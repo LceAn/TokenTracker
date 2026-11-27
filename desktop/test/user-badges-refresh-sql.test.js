@@ -36,7 +36,7 @@ before(async () => {
     GRANT CREATE ON SCHEMA public TO project_admin;
     SET ROLE project_admin;`);
   await db.exec(fs.readFileSync(path.join(__dirname,
-    "../migrations/20261012120001_refresh-badges-from-maintained-rollup.sql"), "utf8"));
+    "../../server/migrations/20261012120001_refresh-badges-from-maintained-rollup.sql"), "utf8"));
   await db.exec("RESET ROLE");
   assert.equal((await db.query("SELECT user_badges_refresh() AS legacy")).rows[0].legacy, -1,
     "migration must leave the legacy function alone");

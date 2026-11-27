@@ -75,7 +75,7 @@ async function request(path, options, status = 200) {
 }
 async function checkBrowser() {
   const { chromium } =
-    await import("../../../dashboard/node_modules/playwright/index.mjs");
+    await import("../../../../desktop/dashboard/node_modules/playwright/index.mjs");
   const browser = await chromium.launch({ headless: true, channel: "chrome" });
   const context = await browser.newContext({ locale: "en-US" });
   const page = await context.newPage();

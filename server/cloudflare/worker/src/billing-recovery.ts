@@ -1,14 +1,14 @@
 import {
   BillingError,
   type CloudOrder,
-} from "../../../dashboard/edge-patches/cloud/contracts";
+} from "../../../../desktop/dashboard/edge-patches/cloud/contracts";
 import {
   closeUnpaidWaffoAttempts,
   confirmedCancelledWaffoAttempts,
   queryWaffoBindings,
   type WaffoConfig,
-} from "../../../dashboard/edge-patches/cloud/waffo";
-import { reconcileWaffoLedger } from "../../../dashboard/edge-patches/cloud/waffo-reconciliation";
+} from "../../../../desktop/dashboard/edge-patches/cloud/waffo";
+import { reconcileWaffoLedger } from "../../../../desktop/dashboard/edge-patches/cloud/waffo-reconciliation";
 import { mutateOwner, checkoutGuard as checkPurchase } from "./billing-orders";
 import { waffoLedger } from "./billing-ledger";
 

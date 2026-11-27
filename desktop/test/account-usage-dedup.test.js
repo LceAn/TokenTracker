@@ -421,7 +421,7 @@ function readRepoFile(rel) {
 }
 
 test("migration: session-state table identity is (user_id, source, session_id) and the upsert guard is strictly newer", () => {
-  const sql = readRepoFile("migrations/20260817120000_account-session-states.sql");
+  const sql = readRepoFile("../server/migrations/20260817120000_account-session-states.sql");
   assert.match(sql, /CREATE TABLE IF NOT EXISTS public\.tokentracker_account_session_states/);
   assert.match(
     sql,
@@ -471,7 +471,7 @@ test("ingest edge validates account_session_states and upserts them via the LWW 
   assert.match(ts, /Invalid account session state/, "malformed states fail closed");
   assert.match(ts, /r\.source \+ "\|" \+ r\.session_id/, "batch dedup is last-wins per session");
   assert.match(ts, /cloud_ingest_usage/, "edge delegates admission and both writes to one transaction");
-  const sql = readRepoFile("migrations/20261004120000_cloud-machine-access.sql");
+  const sql = readRepoFile("../server/migrations/20261004120000_cloud-machine-access.sql");
   assert.match(sql, /tokentracker_upsert_account_session_states/, "transaction calls the LWW upsert RPC");
   // Session states land AFTER the hourly upsert in file order.
   assert.ok(

@@ -18,11 +18,11 @@ A self-hosted instance is independent of the official account system and public 
 
 ## What is open source
 
-The public repository includes the application and backend TypeScript/SQL source. The historical `17247d9d` inventory contained 23 backend entry files and 33 migration files; recount the chosen release commit rather than treating those as current counts. The [MIT license](../LICENSE) permits using and modifying this code. A source inventory does not prove deployed-source parity.
+The public repository includes the application and backend TypeScript/SQL source. The historical `17247d9d` inventory contained 23 backend entry files and 33 migration files; recount the chosen release commit rather than treating those as current counts. The [MIT license](../../LICENSE) permits using and modifying this code. A source inventory does not prove deployed-source parity.
 
 The historical migrations are incremental changes to an existing database. Some files are operator-specific moderation or repair operations. **Do not apply every historical migration to a fresh database.** Use the [clean private-backend installer](self-hosting-backend.md). Its `--sql` mode owns a PostgreSQL transaction; `--migration` uses the linked InsForge migration API's transaction.
 
-Subscription, device-access, gift and archive work is tracked on `feat/cloud-subscriptions`; it has not been released as paid Pro. The clean private baseline, official local Linux platform and standard Dashboard A→C→A switching have recorded acceptance. Public VPS HTTPS and supported native routes remain pending. [Current inventory and gaps](self-hosting-status.md) · [Release handoff](cloud-release-readiness.md)
+Subscription, device-access, gift and archive work is tracked on `feat/cloud-subscriptions`; it has not been released as paid Pro. The clean private baseline, official local Linux platform and standard Dashboard A→C→A switching have recorded acceptance. Public VPS HTTPS and supported native routes remain pending. [Current inventory and gaps](self-hosting-status.md) · [Release handoff](../../desktop/docs/cloud-release-readiness.md)
 
 ## Prepare the VPS
 
@@ -38,10 +38,10 @@ After the platform is installed, the current InsForge CLI supports linking direc
 
 ## Install the application
 
-The local branch provides a clean private-backend installer and a 14-function manifest under `scripts/self-host/`. Follow the [backend installation guide](self-hosting-backend.md). Actual platform and VPS acceptance remain separate from the local SQL tests.
+The local branch provides a clean private-backend installer and a 14-function manifest under `server/self-host/`. Follow the [backend installation guide](self-hosting-backend.md). Actual platform and VPS acceptance remain separate from the local SQL tests.
 
 1. Install the reviewed application schema, RPCs, indexes, triggers, RLS policies and grants. Verify the server role and authenticated/anonymous roles against the selected InsForge release. Do not reuse production users, tokens, orders or moderation records as seed data.
-2. Build the private backend with `node scripts/self-host/build-functions.cjs` and deploy its 14 reviewed functions through the self-hosted management interface. The manifest includes device authorization, issuance, ingestion, rename, account reads and free instance settings. It excludes public-community and payment webhooks. Relative imports are bundled and the SDK is pinned.
+2. Build the private backend with `node server/self-host/build-functions.cjs` and deploy its 14 reviewed functions through the self-hosted management interface. The manifest includes device authorization, issuance, ingestion, rename, account reads and free instance settings. It excludes public-community and payment webhooks. Relative imports are bundled and the SDK is pinned.
 3. Supply server-only `INSFORGE_BASE_URL`, `INSFORGE_SERVICE_ROLE_KEY`, and the appropriate `INSFORGE_ANON_KEY`/`ANON_KEY`, `JWT_SECRET` or `JWT_PUBLIC_KEY` to functions. Verify actual user JWTs and server-role database access. Do not assume the self-hosted `ACCESS_API_KEY` can be substituted into every existing edge-token flow without testing.
 4. Configure sign-in, session cookies, allowed origins and redirect URLs on your instance. An OAuth provider needs your own application registration and callback URL. Test browser, local CLI and native callbacks separately. Configure an email delivery service if your chosen authentication flow sends verification or reset emails.
 5. Build and serve the web dashboard against your own API and anonymous key. Keep frontend history routing, `/device` and native callback routes reachable on your own web origin. Check every auth/usage request's actual destination.
@@ -64,7 +64,7 @@ Use your instance's public anonymous key. InsForge v2.3.3 creates an opaque `ano
 
 Local CLI-served HTML loads `/api/runtime-config.js` synchronously before the app module. Its public descriptor supplies the selected `baseUrl`, `anonKey`, `dashboardUrl` and any `configurationError`; it takes precedence over compiled defaults. It contains no device JWT or server credential. Custom sign-in displays the destination host, so users can distinguish their own server from the official service.
 
-The CLI runtime supports `TOKENTRACKER_INSFORGE_BASE_URL`, `TOKENTRACKER_INSFORGE_ANON_KEY` and `TOKENTRACKER_DASHBOARD_URL`, as well as persisted configuration. Verify the actual descriptor and request destinations after configuration. Source references are [runtime config](../src/lib/runtime-config.js), [local API](../src/lib/local-api.js) and [frontend configuration](../dashboard/src/lib/insforge-config.ts).
+The CLI runtime supports `TOKENTRACKER_INSFORGE_BASE_URL`, `TOKENTRACKER_INSFORGE_ANON_KEY` and `TOKENTRACKER_DASHBOARD_URL`, as well as persisted configuration. Verify the actual descriptor and request destinations after configuration. Source references are [runtime config](../../desktop/src/lib/runtime-config.js), [local API](../../desktop/src/lib/local-api.js) and [frontend configuration](../../desktop/dashboard/src/lib/insforge-config.ts).
 
 The frontend binds its SDK singleton to the selected endpoint/key pair. `resetInsforgeClientForInstanceChange()` clears its in-memory SDK session and SDK auth/PKCE namespace, and emits `tt.insforgeInstanceChanged` so account caches and cloud-sync capability are cleared. It preserves provider preferences and local usage. Purchases and reminder dismissals are namespaced by instance/account. A new instance requires its own sign-in; an old client cannot provide a bearer token for the new instance.
 
@@ -91,7 +91,7 @@ Unit tests do not satisfy these public VPS checks. A later official v2.3.3 local
 
 Back up the database, persistent file storage, deployment configuration and encryption/signing keys to a private recovery location. Use a separate destination from the VPS and test recovery. Keep database and storage backups consistent with the chosen schema and application version.
 
-Install only reviewed schedules, with bounded work and observable failures. Usage archival must pass its separate parity, concurrency and recovery gates before a retention job can move data. A running container is not proof that rollups, repair jobs or backups are executing. [Archive activation checks](cloud-usage-archive.md)
+Install only reviewed schedules, with bounded work and observable failures. Usage archival must pass its separate parity, concurrency and recovery gates before a retention job can move data. A running container is not proof that rollups, repair jobs or backups are executing. [Archive activation checks](../../desktop/docs/cloud-usage-archive.md)
 
 Before upgrades, record the application commit, InsForge version/image digests, schema version and function sources. Back up first, apply the explicit upgrade manifest, verify the client/API contract, and keep a compatible rollback path. Review authentication, storage and function-runtime changes when upgrading InsForge.
 

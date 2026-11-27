@@ -65,13 +65,13 @@ test("account wire wrappers preserve user and device scoping through the existin
     ["summary", "20260918041500_fold-account-summary-and-heatmap-aggregation.sql", "20261003093000_compact-account-summary-model-wire.sql"],
     ["model_breakdown", "20260918043000_fold-account-model-breakdown-aggregation.sql", "20261003093000_compact-account-summary-model-wire.sql"],
   ]) {
-    const wireMigration = fs.readFileSync(path.join(ROOT, "migrations", wireMigrationFile), "utf8");
+    const wireMigration = fs.readFileSync(path.join(ROOT, "..", "server", "migrations", wireMigrationFile), "utf8");
     assert.match(readEdge(`tokentracker-account-${endpoint.replaceAll("_", "-")}.ts`),
       new RegExp(`rpc\\("account_${endpoint}_wire"`, "u"));
     assert.match(wireMigration,
       new RegExp(`public\\.account_${endpoint}_compact\\(p_user_id, p_device_id, p_from, p_to, p_tz, p_offset_min, p_range_from, p_range_to\\)`, "u"),
       `${endpoint} wire RPC must pass the exact user/device request to compact aggregation`);
-    const compact = fs.readFileSync(path.join(ROOT, "migrations", compactMigration), "utf8");
+    const compact = fs.readFileSync(path.join(ROOT, "..", "server", "migrations", compactMigration), "utf8");
     assert.match(compact, /public\.account_usage_grouped_cached\(\s*p_user_id,\s*p_device_id,/u,
       `${endpoint} compact RPC must preserve user/device scoping through the shared cache`);
   }
@@ -79,7 +79,7 @@ test("account wire wrappers preserve user and device scoping through the existin
 
 test("the shared cache delegates misses to the atomic v2 device-scoping RPC", () => {
   const migration = fs.readFileSync(
-    path.join(ROOT, "migrations/20260718071507_add-shared-account-usage-cache.sql"),
+    path.join(ROOT, "../server/migrations/20260718071507_add-shared-account-usage-cache.sql"),
     "utf8",
   );
   assert.match(migration, /public\.account_usage_grouped_v2\(/u);
@@ -88,7 +88,7 @@ test("the shared cache delegates misses to the atomic v2 device-scoping RPC", ()
 
 test("v2 RPC narrows only to an active device owned by the requested user", () => {
   const migration = fs.readFileSync(
-    path.join(ROOT, "migrations/20260717013000_harden-backend-hot-paths.sql"),
+    path.join(ROOT, "../server/migrations/20260717013000_harden-backend-hot-paths.sql"),
     "utf8",
   );
   assert.match(migration, /d\.user_id\s*=\s*p_user_id/u, "RPC must scope devices to the user");

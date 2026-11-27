@@ -7,7 +7,7 @@ const path = require('node:path');
 const { PGlite } = require('@electric-sql/pglite');
 const { setup: setupArchive } = require('./helpers/cloud-usage-archive-fixture');
 
-const read = (name) => fs.readFileSync(path.join(__dirname, '../migrations', name), 'utf8');
+const read = (name) => fs.readFileSync(path.join(__dirname, '../../server/migrations', name), 'utf8');
 const clusterSql = read('20260804043427_align-leaderboard-machine-clusters.sql');
 const sessionSql = read('20260817120000_account-session-states.sql');
 const totalSql = read('20260904064000_cache-leaderboard-total-rollup.sql');

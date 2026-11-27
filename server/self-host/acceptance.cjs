@@ -5,12 +5,14 @@ const http=require('node:http');
 const crypto=require('node:crypto');
 const {spawnSync}=require('node:child_process');
 const {pathToFileURL}=require('node:url');
-const {resolveRuntimeConfig,isPublicAnonKey}=require('../../src/lib/runtime-config');
-const {createLocalApiHandler}=require('../../src/lib/local-api');
-const {serveStaticFile}=require('../../src/lib/static-server');
-const {cmdDeviceLogin}=require('../../src/commands/device-login');
-const {cmdInit}=require('../../src/commands/init');
-const ROOT=path.resolve(__dirname,'../..');
+const {resolveRuntimeConfig,isPublicAnonKey}=require('../../desktop/src/lib/runtime-config');
+const {createLocalApiHandler}=require('../../desktop/src/lib/local-api');
+const {serveStaticFile}=require('../../desktop/src/lib/static-server');
+const {cmdDeviceLogin}=require('../../desktop/src/commands/device-login');
+const {cmdInit}=require('../../desktop/src/commands/init');
+// The npm package in desktop/ provides the CLI and the built dashboard this
+// harness drives.
+const ROOT=path.resolve(__dirname,'../../desktop');
 function check(value,message){if(!value)throw Error(message);}
 function loopback(value){const u=new URL(value);check(u.protocol==='http:'&&u.hostname==='127.0.0.1'&&!u.username&&!u.password&&!u.search&&!u.hash&&u.pathname==='/','Acceptance targets must be explicit loopback origins');return u.origin;}
 function publicKey(file){const mode=fs.statSync(file).mode&0o777;check((mode&0o077)===0,'Server environment must be private');const row=fs.readFileSync(file,'utf8').split(/\n/).find(s=>s.startsWith('ACCESS_ANON_KEY='));const key=row?.slice('ACCESS_ANON_KEY='.length);check(isPublicAnonKey(key),'Instance public key missing');return key;}

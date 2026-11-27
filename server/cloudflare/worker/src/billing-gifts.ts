@@ -1,8 +1,8 @@
-import type { CloudOrder } from "../../../dashboard/edge-patches/cloud/contracts";
+import type { CloudOrder } from "../../../../desktop/dashboard/edge-patches/cloud/contracts";
 import {
   confirmExpiredUnusedWaffoCheckout,
   type WaffoConfig,
-} from "../../../dashboard/edge-patches/cloud/waffo";
+} from "../../../../desktop/dashboard/edge-patches/cloud/waffo";
 import { readMembership } from "./billing-membership";
 import { mutateOwner } from "./billing-orders";
 

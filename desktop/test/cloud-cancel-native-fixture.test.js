@@ -49,7 +49,7 @@ test("synthetic SQL literals escape quotes without reimplementing billing logic"
 
 test("native financial CI covers production PostgreSQL15 and PostgreSQL17 with no project secrets", () => {
   const fs = require("node:fs"), path = require("node:path");
-  const workflow = fs.readFileSync(path.join(__dirname, "../.github/workflows/ci.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(__dirname, "../../.github/workflows/ci.yml"), "utf8");
   const job = workflow.slice(workflow.indexOf("  billing-native-postgres:"));
   assert.match(job, /postgres: \[15, 17\]/);
   assert.match(job, /image: postgres:\$\{\{ matrix.postgres \}\}/);
@@ -110,7 +110,7 @@ test("legacy claimed-false recovery cannot reuse a tracked operation as provenan
 
 test("cancellation migration is accepted by official InsForge session-configuration guards", () => {
   const fs = require("node:fs"), path = require("node:path");
-  const sql = fs.readFileSync(path.join(__dirname, "../migrations/20261117090000_cloud-order-cancellation.sql"), "utf8");
+  const sql = fs.readFileSync(path.join(__dirname, "../../server/migrations/20261117090000_cloud-order-cancellation.sql"), "utf8");
   assert.doesNotMatch(sql, /\bset_config\s*\(/i);
   assert.doesNotMatch(sql, /\bcurrent_setting\s*\(/i);
 });

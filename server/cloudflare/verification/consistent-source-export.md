@@ -5,7 +5,7 @@ The exporter holds a PostgreSQL repeatable-read, read-only transaction open on t
 Run from the migration checkout with PostgreSQL client tools, GPG and the authenticated InsForge CLI. The linked project directory contains the existing local InsForge link. The script validates the production project and TLS hostname. Use an encrypted operator volume as scratch, a private JSON file with the target's AUTH_MIGRATION_KEY and a separate GPG passphrase file. A production target needs its own migration key.
 
 ```sh
-python3 cloudflare/scripts/export-consistent-snapshot.py \
+python3 server/cloudflare/scripts/export-consistent-snapshot.py \
   --linked-project "$TT_LINKED_SOURCE" \
   --output "$TT_NEW_BACKUP_DIRECTORY" \
   --scratch "$TT_ENCRYPTED_SCRATCH" \
@@ -23,7 +23,7 @@ The regression test creates and drops two disposable local databases. It commits
 
 ```sh
 TT_TEST_PG_SOCKET="$TT_PRIVATE_LOCAL_PG_SOCKET" TT_TEST_PG_PORT="$TT_PRIVATE_LOCAL_PG_PORT" \
-  python3 cloudflare/scripts/test/test_consistent_snapshot.py -v
+  python3 server/cloudflare/scripts/test/test_consistent_snapshot.py -v
 ```
 
 ## Rehearsal on 24 November 2026

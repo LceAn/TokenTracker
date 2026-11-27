@@ -6,6 +6,7 @@ const path = require("node:path");
 const WORKFLOW_PATH = path.join(
   __dirname,
   "..",
+  "..",
   ".github",
   "workflows",
   "release-dmg.yml"

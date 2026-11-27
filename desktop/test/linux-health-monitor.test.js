@@ -144,6 +144,6 @@ test('Linux configures the WebKitGTK DMA-BUF fallback before Tauri starts', () =
 });
 
 test('GitHub CI validates synchronized platform versions', () => {
-  const workflow = read('.github/workflows/ci.yml');
+  const workflow = read('../.github/workflows/ci.yml');
   assert.match(workflow, /npm run validate:versions/);
 });

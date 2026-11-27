@@ -1,6 +1,6 @@
 # Self-hosting implementation status
 
-Public source inventory reviewed on 2026-10-04; actual private-backend platform verified on 2026-10-08 and gift-stage database checks recorded on 2026-10-09. This is an engineering inventory, not public VPS acceptance. The historical inventory counts below came from `17247d9d`; they are not counts of today's `origin/main`. Current source, branch integration and release blockers are recorded in the [release handoff](cloud-release-readiness.md).
+Public source inventory reviewed on 2026-10-04; actual private-backend platform verified on 2026-10-08 and gift-stage database checks recorded on 2026-10-09. This is an engineering inventory, not public VPS acceptance. The historical inventory counts below came from `17247d9d`; they are not counts of today's `origin/main`. Current source, branch integration and release blockers are recorded in the [release handoff](../../desktop/docs/cloud-release-readiness.md).
 
 ## Verified now
 

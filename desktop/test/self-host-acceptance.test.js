@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
-const {plan,publicKey,parse,initializeProducer}=require('../scripts/self-host/acceptance.cjs');
+const {plan,publicKey,parse,initializeProducer}=require('../../server/self-host/acceptance.cjs');
 
 test('self-host acceptance plan is read-only and restricts both targets to distinct loopback origins',()=>{
   const value=plan({a:'http://127.0.0.1:8730',c:'http://127.0.0.1:8750'});
@@ -33,7 +33,7 @@ test('private acceptance config rejects exposed files and privileged credentials
 
 test('default CLI plan does not require credentials, write a directory or call a backend',()=>{
   const directory=path.join(os.tmpdir(),'tt-plan-unused-'+Date.now());
-  const result=spawnSync(process.execPath,['scripts/self-host/acceptance.cjs','--plan','--a','http://127.0.0.1:57300','--c','http://127.0.0.1:57500','--directory',directory],{cwd:path.resolve(__dirname,'..'),encoding:'utf8'});
+  const result=spawnSync(process.execPath,['../server/self-host/acceptance.cjs','--plan','--a','http://127.0.0.1:57300','--c','http://127.0.0.1:57500','--directory',directory],{cwd:path.resolve(__dirname,'..'),encoding:'utf8'});
   assert.equal(result.status,0,result.stderr);
   assert.equal(JSON.parse(result.stdout).applied,false);
   assert.equal(fs.existsSync(directory),false);

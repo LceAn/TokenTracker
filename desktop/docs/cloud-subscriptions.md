@@ -8,7 +8,7 @@ The user-facing service is named TokenTracker Cloud (云服务). Legacy internal
 
 Local tracking, provider integrations, cost estimates, limits, desktop features, and local exports remain free and open source. Cloud is the officially managed cross-device analytics service. A membership belongs to one account and works across the CLI, macOS, Windows, Linux, and web dashboard.
 
-There are three ways to use the product. Local is ready and free. Managed Cloud hosts account aggregation and history. Self-hosted software is free under MIT, with the owner paying for their VPS and maintaining it; the complete self-hosted installation remains a technical preview until its bootstrap, routing and real deployment checks pass. See the [self-hosting guide](self-hosting.md) ([简体中文](self-hosting.zh-CN.md)).
+There are three ways to use the product. Local is ready and free. Managed Cloud hosts account aggregation and history. Self-hosted software is free under MIT, with the owner paying for their VPS and maintaining it; the complete self-hosted installation remains a technical preview until its bootstrap, routing and real deployment checks pass. See the [self-hosting guide](../../server/docs/self-hosting.md) ([简体中文](../../server/docs/self-hosting.zh-CN.md)).
 
 | | Free | Cloud |
 |---|---|---|

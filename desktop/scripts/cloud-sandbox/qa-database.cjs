@@ -90,11 +90,11 @@ function buildSql({ allowedUsers, baselineSql }) {
   if (users.length !== allowedUsers.length || typeof baselineSql !== "string") throw Error("Invalid QA users or baseline snapshot");
   for (const name of Object.values(OBJECT_MAP)) if (Buffer.byteLength(name) > 63) throw Error("QA identifier exceeds PostgreSQL's limit: " + name);
   const sourceFunctions = SOURCE_FUNCTIONS.map(name => functionSql(baselineSql, name));
-  const machineSource = read("migrations/20261004120000_cloud-machine-access.sql");
+  const machineSource = read("../server/migrations/20261004120000_cloud-machine-access.sql");
   const machineFunctions = MACHINE_FUNCTIONS.map(name => functionSql(machineSource, name));
   // Retain the current self-host-aware access rule while using real sandbox membership.
-  machineFunctions[MACHINE_FUNCTIONS.indexOf("cloud_account_access")] = functionSql(read("migrations/20261008120000_self-hosted-access.sql"), "cloud_account_access");
-  const archive = rewrite(read("migrations/20261005120000_cloud-usage-archive.sql"));
+  machineFunctions[MACHINE_FUNCTIONS.indexOf("cloud_account_access")] = functionSql(read("../server/migrations/20261008120000_self-hosted-access.sql"), "cloud_account_access");
+  const archive = rewrite(read("../server/migrations/20261005120000_cloud-usage-archive.sql"));
   const clonedFunctions = [...sourceFunctions, ...machineFunctions].map(rewrite).join("\n\n");
   const userArray = "ARRAY[" + users.map(id => literal(id) + "::uuid").join(",") + "]";
   const membership = `CREATE FUNCTION public.${RPC_MAP.cloud_membership}(p_user_id uuid,p_environment text)

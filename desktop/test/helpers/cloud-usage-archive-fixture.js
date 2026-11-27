@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { PGlite } = require('@electric-sql/pglite');
-const migration = name => fs.readFileSync(path.join(__dirname, '../../migrations', name), 'utf8');
+const migration = name => fs.readFileSync(path.join(__dirname, '../../../server/migrations', name), 'utf8');
 function functionSql(sql, name) {
   const start = sql.indexOf('CREATE OR REPLACE FUNCTION public.' + name + '(');
   assert.notEqual(start, -1, name);

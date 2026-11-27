@@ -20,7 +20,7 @@ import { dispatchReports } from "../src/reports";
 import { profileReport } from "../src/report-profile";
 import {publicRowCost} from "../src/report-public-pricing";
 import { computeRowCost } from "../src/report-pricing";
-import legacyPricing from "../../../dashboard/edge-patches/tokentracker-account-daily.ts?raw";
+import legacyPricing from "../../../../desktop/dashboard/edge-patches/tokentracker-account-daily.ts?raw";
 import workerPricing from "../src/report-pricing.ts?raw";
 
 const user = "e42d4c42-4760-418b-ba5f-57f02c80cb74";

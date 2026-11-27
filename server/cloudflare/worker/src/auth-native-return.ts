@@ -1,4 +1,4 @@
-import { normalizeResolvedLocale } from "../../../dashboard/src/lib/locale-tag";
+import { normalizeResolvedLocale } from "../../../../desktop/dashboard/src/lib/locale-tag";
 import { nonce } from "./auth";
 
 declare const __NATIVE_RETURN_COPY__: Record<string, [string, string, string]>;

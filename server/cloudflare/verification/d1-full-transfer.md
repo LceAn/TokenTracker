@@ -5,7 +5,7 @@ The input is the completed SQLite image and its JSON receipt from `rehearse-d1-v
 From the migration checkout, use a D1-edit token already in the environment:
 
 ```sh
-python3 cloudflare/scripts/import-verified-sqlite.py \
+python3 server/cloudflare/scripts/import-verified-sqlite.py \
   --source "$TT_SQLITE_IMAGE" --receipt "$TT_SQLITE_RECEIPT" \
   --account "$TT_CF_ACCOUNT_ID" --database "$TT_EMPTY_D1_ID" \
   --expect-name "$TT_EMPTY_D1_NAME" --chunk-mib 12 --page-rows 10000 --readers 4

@@ -14,7 +14,7 @@ npm run build --prefix cloudflare/worker
 node cloudflare/worker/test/parallel-backends.mjs
 npm run typecheck --prefix dashboard
 npm test --prefix dashboard
-python cloudflare/scripts/test/test_snapshot_delta.py -v
+python server/cloudflare/scripts/test/test_snapshot_delta.py -v
 ```
 
 联通测试使用 PGlite PostgreSQL 和 Workerd D1，覆盖旧客户端上传、新客户端双写、Cloudflare 暂时不可用、重复和乱序提交、用量统计、登录保持及账号隔离。Windows 的升级测试分别使用旧安装包和新安装包的 `EmbeddedServer` 目录，检查动态端口变化后原会话仍可使用。

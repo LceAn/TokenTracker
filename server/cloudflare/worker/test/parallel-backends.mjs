@@ -9,10 +9,10 @@ import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { PGlite } from "@electric-sql/pglite";
 
 const require = createRequire(import.meta.url);
-const { drainQueueToCloud } = require("../../../src/commands/sync.js");
-const { CLOUDFLARE_API_URL, DEFAULT_BASE_URL } = require("../../../src/lib/runtime-config.js");
-const { functionUrlFor } = require("../../../src/lib/function-url.js");
-const root = fileURLToPath(new URL("../../../", import.meta.url));
+const { drainQueueToCloud } = require("../../../../desktop/src/commands/sync.js");
+const { CLOUDFLARE_API_URL, DEFAULT_BASE_URL } = require("../../../../desktop/src/lib/runtime-config.js");
+const { functionUrlFor } = require("../../../../desktop/src/lib/function-url.js");
+const root = fileURLToPath(new URL("../../../../", import.meta.url));
 const scratch = await mkdtemp(join(tmpdir(), "tt-parallel-backends-"));
 const queue = join(scratch, "queue.jsonl");
 const checkpoint = join(scratch, "queue.state.json");
@@ -105,7 +105,7 @@ async function installD1(db) {
     "0020_billing.sql", "0030_public_reports.sql", "0032_report_rollup.sql",
     "0042_device_activity.sql", "0043_usage_cost_coverage.sql", "0044_insforge_usage_mirror.sql",
   ]) {
-    const sql = (await read("cloudflare/migrations/" + name)).replace(/^--.*$/gm, "");
+    const sql = (await read("server/cloudflare/migrations/" + name)).replace(/^--.*$/gm, "");
     const match = name === "0032_report_rollup.sql"
       ? /;\s*(?=CREATE |INSERT INTO report_dirty_days |$)/
       : /;/;
@@ -147,8 +147,8 @@ try {
   );
   await source.query("INSERT INTO tokentracker_device_tokens(id,user_id,device_id,token_hash) VALUES($1,$2,$3,$4)", [randomUUID(), account, device, tokenHash]);
   await putUsage(older, 10);
-  await source.exec(await read("migrations/20261126151000_cloudflare_usage_mirror.sql"));
-  await source.exec(await read("migrations/20261126190500_cloudflare-machine-state-mirror.sql"));
+  await source.exec(await read("server/migrations/20261126151000_cloudflare_usage_mirror.sql"));
+  await source.exec(await read("server/migrations/20261126190500_cloudflare-machine-state-mirror.sql"));
   await assert.rejects(source.transaction(async (tx) => {
     await tx.query("UPDATE tokentracker_hourly SET total_tokens=900 WHERE user_id=$1", [account]);
     throw new Error("rollback");
@@ -170,7 +170,7 @@ try {
 
   worker = new Miniflare(convertV4MiniflareOptions({
     modules: true,
-    scriptPath: join(root, "cloudflare/worker/.cloudflare/output/v1/workers/default/bundle/index.js"),
+    scriptPath: join(root, "server/cloudflare/worker/.cloudflare/output/v1/workers/default/bundle/index.js"),
     compatibilityDate: "2026-11-19",
     compatibilityFlags: ["nodejs_compat"],
     d1Databases: ["DB"],

@@ -8,7 +8,7 @@ const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
 
 describe("Skills cloud inventory guardrails", () => {
   it("keeps the database browser-inaccessible and device-scoped", () => {
-    const sql = read("migrations/20260721113000_add-device-skill-inventories.sql");
+    const sql = read("../server/migrations/20260721113000_add-device-skill-inventories.sql");
     assert.match(sql, /PRIMARY KEY \(user_id, device_id\)/);
     assert.match(sql, /REFERENCES public\.tokentracker_devices\(id\) ON DELETE CASCADE/);
     assert.match(sql, /ENABLE ROW LEVEL SECURITY/);

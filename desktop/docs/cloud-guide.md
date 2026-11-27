@@ -26,7 +26,7 @@ Cross-device monthly reports and budget views are future work, not delivered pai
 
 Self-hosted software is free under MIT. You pay for your server, domain and backups and maintain the instance yourself. Its accounts and statistics are independent of the official public leaderboard. Hosted device/history limits are service-plan terms, not software-license restrictions.
 
-The complete self-hosted path is currently a technical preview. A clean private application installer and local official-platform authentication/sync/restore have been verified; standard Dashboard instance switching also has actual evidence. Public VPS HTTPS, native routes and a reviewed version upgrade remain pending. Read the [self-hosting guide](self-hosting.md) before attempting deployment; a complete one-command VPS installer is not available.
+The complete self-hosted path is currently a technical preview. A clean private application installer and local official-platform authentication/sync/restore have been verified; standard Dashboard instance switching also has actual evidence. Public VPS HTTPS, native routes and a reviewed version upgrade remain pending. Read the [self-hosting guide](../../server/docs/self-hosting.md) before attempting deployment; a complete one-command VPS installer is not available.
 
 ## Gifted Cloud access
 

@@ -11,7 +11,7 @@ function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 }
 
-for (const relativePath of ["migrations/20260804043427_align-leaderboard-machine-clusters.sql"]) {
+for (const relativePath of ["../server/migrations/20260804043427_align-leaderboard-machine-clusters.sql"]) {
   test(`${relativePath} keeps machine-cluster leaderboard semantics`, () => {
     const sql = read(relativePath);
 

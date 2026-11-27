@@ -4,13 +4,13 @@ import {
   text,
   uuid,
   type CloudOrder,
-} from "../../../dashboard/edge-patches/cloud/contracts";
+} from "../../../../desktop/dashboard/edge-patches/cloud/contracts";
 import {
   cancelWaffoSubscription,
   verifyWaffoWebhook,
   type WaffoConfig,
-} from "../../../dashboard/edge-patches/cloud/waffo";
-import { reconcileWaffoLedger } from "../../../dashboard/edge-patches/cloud/waffo-reconciliation";
+} from "../../../../desktop/dashboard/edge-patches/cloud/waffo";
+import { reconcileWaffoLedger } from "../../../../desktop/dashboard/edge-patches/cloud/waffo-reconciliation";
 import { dispatchBillingDevices } from "./devices";
 import { getAccountId } from "./auth";
 import { waffoLedger } from "./billing-ledger";

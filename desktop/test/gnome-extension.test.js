@@ -44,7 +44,7 @@ test("GNOME extension ships in the deb, rpm and Arch packages", () => {
     assert.deepEqual(mapped, expected, format);
   }
   const pkgbuild = fs.readFileSync(path.join(root, "TokenTrackerLinux/packaging/arch/tokentracker-linux/PKGBUILD"), "utf8");
-  const workflow = fs.readFileSync(path.join(root, ".github/workflows/release-dmg.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(root, "../.github/workflows/release-dmg.yml"), "utf8");
   const loopOver = (text, head) => text.split("\n").find((line) => line.includes(head)) ?? "";
   for (const f of files) {
     assert.ok(loopOver(pkgbuild, "for _file in").includes(f), `PKGBUILD installs ${f}`);

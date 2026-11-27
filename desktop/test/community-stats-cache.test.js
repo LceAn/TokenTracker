@@ -30,7 +30,7 @@ test("community stats endpoint reads a precomputed snapshot instead of scanning 
 });
 
 test("community stats refresh aggregates the daily rollup plus a live tail", () => {
-  const migration = read("migrations/20260716113500_add-community-stats-refresh.sql");
+  const migration = read("../server/migrations/20260716113500_add-community-stats-refresh.sql");
   const schedule = read("scripts/ops/community-stats-refresh-cron.sql");
 
   assert.match(migration, /tokentracker_leaderboard_rollup_daily/);
@@ -41,7 +41,7 @@ test("community stats refresh aggregates the daily rollup plus a live tail", () 
 });
 
 test("community stats refresh reads the v2 rollup and drops anti-cheat excluded accounts", () => {
-  const migration = read("migrations/20260923093000_community-stats-v2-rollup-exclusions.sql");
+  const migration = read("../server/migrations/20260923093000_community-stats-v2-rollup-exclusions.sql");
 
   assert.match(migration, /FROM public\.tokentracker_leaderboard_rollup_meta_v2 m/);
   assert.match(migration, /FROM public\.tokentracker_leaderboard_rollup_daily_v2 r\s+WHERE r\.day < \(v_cut AT TIME ZONE 'UTC'\)::date/);
@@ -54,7 +54,7 @@ test("community stats refresh reads the v2 rollup and drops anti-cheat excluded 
 });
 
 test("community stats cache table is server-only and singleton keyed", () => {
-  const migration = read("migrations/20260716110044_add-community-stats-cache.sql");
+  const migration = read("../server/migrations/20260716110044_add-community-stats-cache.sql");
 
   assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.tokentracker_community_stats/i);
   assert.match(migration, /id\s+text\s+PRIMARY KEY/i);
@@ -64,7 +64,7 @@ test("community stats cache table is server-only and singleton keyed", () => {
 });
 
 test("community insights refresh exposes useful aggregates without adding location tracking", () => {
-  const migration = read("migrations/20260718075000_expand-community-insights.sql");
+  const migration = read("../server/migrations/20260718075000_expand-community-insights.sql");
 
   assert.match(migration, /provider_breakdown jsonb/i);
   assert.match(migration, /daily_growth jsonb/i);
@@ -93,7 +93,7 @@ test("community insights frontend reuses the dashboard trend chart and caps rank
 });
 
 test("community growth compares complete UTC weeks instead of a partial current day", () => {
-  const migration = read("migrations/20260718082000_use-completed-days-for-community-growth.sql");
+  const migration = read("../server/migrations/20260718082000_use-completed-days-for-community-growth.sql");
 
   assert.match(migration, /BETWEEN v_today - 7 AND v_today - 1/);
   assert.match(migration, /BETWEEN v_today - 14 AND v_today - 8/);

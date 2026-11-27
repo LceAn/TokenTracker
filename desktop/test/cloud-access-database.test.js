@@ -6,7 +6,7 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { PGlite } = require('@electric-sql/pglite');
 let db;
-const migration = name => fs.readFileSync(path.join(__dirname, '../migrations', name), 'utf8');
+const migration = name => fs.readFileSync(path.join(__dirname, '../../server/migrations', name), 'utf8');
 before(async () => {
   db = new PGlite();
   await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE project_admin BYPASSRLS;

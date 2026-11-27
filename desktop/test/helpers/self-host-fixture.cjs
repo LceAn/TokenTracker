@@ -6,9 +6,9 @@ const Module=require("node:module");
 const {randomUUID,createHmac}=require("node:crypto");
 const {build}=require("esbuild");
 const {PGlite}=require("@electric-sql/pglite");
-const {install}=require("../../scripts/self-host/install.cjs");
-const {buildFunctions}=require("../../scripts/self-host/build-functions.cjs");
-const {privateFunctions}=require("../../scripts/self-host/manifest.cjs");
+const {install}=require("../../../server/self-host/install.cjs");
+const {buildFunctions}=require("../../../server/self-host/build-functions.cjs");
+const {privateFunctions}=require("../../../server/self-host/manifest.cjs");
 const root=path.resolve(__dirname,"../..");
 const identifier=value=>{if(!/^[a-z_][a-z0-9_]*$/i.test(value.trim()))throw Error("Unsupported SQL identifier");return '"'+value.trim()+'"';};
 async function platform() {

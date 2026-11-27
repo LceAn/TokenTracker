@@ -7,7 +7,7 @@ The comparison joins by declared primary key and compares SQLite storage types a
 Print the changes without writing to either database:
 
 ```sh
-python3 cloudflare/scripts/reconcile-snapshot-delta.py \
+python3 server/cloudflare/scripts/reconcile-snapshot-delta.py \
   --before "$TT_BASE_IMAGE" --before-receipt "$TT_BASE_RECEIPT" \
   --after "$TT_FINAL_IMAGE" --after-receipt "$TT_FINAL_RECEIPT"
 ```
@@ -17,7 +17,7 @@ Add `--local-copy "$TT_CANDIDATE_CLONE"` to apply the delta to an offline copy o
 For a D1 candidate, supply its UUID and expected account and name. Use encrypted private scratch for the required offline clone:
 
 ```sh
-python3 cloudflare/scripts/reconcile-snapshot-delta.py \
+python3 server/cloudflare/scripts/reconcile-snapshot-delta.py \
   --before "$TT_BASE_IMAGE" --before-receipt "$TT_BASE_RECEIPT" \
   --after "$TT_FINAL_IMAGE" --after-receipt "$TT_FINAL_RECEIPT" \
   --account "$TT_CF_ACCOUNT_ID" --database "$TT_CANDIDATE_D1_ID" \
@@ -43,6 +43,6 @@ On 27 November 2026, the Windows rehearsal imported and verified a ten-row basel
 
 - The offline test used clones of a real sealed small image on encrypted storage. One confirmed-account field changed without a timestamp change, one identity mapping was added and another deleted. Reapplying the delta returned `already_verified`. Private rows stayed on the machine.
 - An independent Cloudflare D1 named tokentracker-migration-delta-qa held synthetic data only. Eleven mutations across five tables covered a parent replaced by a new key, a child moving to its new parent before the old one was deleted, same-key count and money corrections, case-only text changes, BLOB and NULL values, a large signed integer, an account insert and deletion of an identity mapping. The complete remote final state had ten rows and ten schema objects. Repeating the invocation verified all ten rows and reported zero remote writes. The full-import verify-only regression against the previous wide QA fixture also passed for 44 rows and three schema objects.
-- Local transactional tests cover independent target drift, failed-transaction rollback, seals with a mismatched digest, an updated table without a stable key, and triggers that continue working after commit. Run `python3 cloudflare/scripts/test/test_snapshot_delta.py -v`.
+- Local transactional tests cover independent target drift, failed-transaction rollback, seals with a mismatched digest, an updated table without a stable key, and triggers that continue working after commit. Run `python3 server/cloudflare/scripts/test/test_snapshot_delta.py -v`.
 
 The paid-scale production delta still requires two comparable final source images and a controlled write-free window. The initial full transfer, this isolated replay and dry-run estimates alone cannot establish the final production cutoff.

@@ -1,13 +1,13 @@
 import {
   BillingError,
   type CloudOrder,
-} from "../../../dashboard/edge-patches/cloud/contracts";
+} from "../../../../desktop/dashboard/edge-patches/cloud/contracts";
 import {
   validateWaffoProduct,
   createWaffoCheckout,
   waffoProductId,
   type WaffoConfig,
-} from "../../../dashboard/edge-patches/cloud/waffo";
+} from "../../../../desktop/dashboard/edge-patches/cloud/waffo";
 import type { BillingEnvironment } from "./billing-membership";
 
 type Order = CloudOrder & {

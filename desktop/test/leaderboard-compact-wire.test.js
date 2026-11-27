@@ -8,7 +8,7 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const edge = fs.readFileSync(path.join(root, "dashboard/edge-patches/tokentracker-leaderboard-refresh.ts"), "utf8");
-const migration = fs.readFileSync(path.join(root, "migrations/20261002082317_compact-leaderboard-usage-wire.sql"), "utf8");
+const migration = fs.readFileSync(path.join(root, "../server/migrations/20261002082317_compact-leaderboard-usage-wire.sql"), "utf8");
 const decoderSource = edge.slice(edge.indexOf("function decodeCompactLeaderboardUsage("), edge.indexOf("interface UserAgg"))
   .replace("payload: CompactLeaderboardUsage): HourlyRow[]", "payload)");
 const decode = vm.runInNewContext(`${decoderSource}\ndecodeCompactLeaderboardUsage;`);

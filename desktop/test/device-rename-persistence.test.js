@@ -15,12 +15,12 @@ const ts = require("typescript");
 const ROOT = path.resolve(__dirname, "..");
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 
-const MIGRATION = "migrations/20260719145649_add-device-name-customized.sql";
+const MIGRATION = "../server/migrations/20260719145649_add-device-name-customized.sql";
 const readMigrationBySuffix = (suffix) => {
-  const file = fs.readdirSync(path.join(ROOT, "migrations"))
+  const file = fs.readdirSync(path.join(ROOT, "..", "server", "migrations"))
     .find((name) => name.endsWith(`_${suffix}.sql`));
   assert.ok(file, `missing migration ending in _${suffix}.sql`);
-  return read(`migrations/${file}`);
+  return read(`../server/migrations/${file}`);
 };
 
 async function loadIssuer(file, exported = "") {
@@ -90,7 +90,7 @@ test("both issuance edges delegate identity refresh and admission to the atomic 
     assert.match(source, /cloudRpc\([\s\S]*?"cloud_issue_device_token"/u);
     assert.doesNotMatch(source, /\.from\("tokentracker_devices"\)/u);
   }
-  const source = read("migrations/20261004120000_cloud-machine-access.sql");
+  const source = read("../server/migrations/20261004120000_cloud-machine-access.sql");
   assert.match(source, /PERFORM public\.refresh_tokentracker_device_identity\(p_user_id,v_device\.id,p_device_name,p_platform\)/u);
   assert.match(source, /device_name=CASE WHEN name_customized THEN device_name ELSE p_device_name END/u);
 });
@@ -149,7 +149,7 @@ test("device identity refresh merges a matching legacy row without losing usage 
 });
 
 test("shared SQL adoption retains renamed defaults and stable same-hostname suffixes", () => {
-  const source = read("migrations/20261004120000_cloud-machine-access.sql");
+  const source = read("../server/migrations/20261004120000_cloud-machine-access.sql");
   assert.match(source, /device_name=ANY\(p_legacy_names\) OR default_device_name=ANY\(p_legacy_names\)/u);
   assert.match(source, /left\(p_device_name,116\) \|\| ' #' \|\| left\(coalesce\(p_machine_id,p_token_id::text\),8\)/u);
   assert.match(source, /EXCEPTION WHEN unique_violation THEN[\s\S]*?SET machine_id=p_machine_id WHERE id=v_device\.id/u);

@@ -1,8 +1,8 @@
 // Bundle the three strings used by the desktop handoff, in the dashboard's languages.
 import { readFileSync } from "node:fs";
-import { readCopyRegistry } from "../../scripts/validate-locale-coverage.cjs";
+import { readCopyRegistry } from "../../../desktop/scripts/validate-locale-coverage.cjs";
 
-const content = new URL("../../dashboard/src/content/", import.meta.url);
+const content = new URL("../../../desktop/dashboard/src/content/", import.meta.url);
 const labels = ["auth.callback.success", "auth.callback.redirecting", "cloud.action.open_app"];
 const english = Object.fromEntries(readCopyRegistry().map(({ key, text }) => [key, text]));
 function select(dictionary) {

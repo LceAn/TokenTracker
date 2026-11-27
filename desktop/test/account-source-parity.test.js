@@ -67,7 +67,7 @@ test("account-level source list is identical across source-metadata, the account
       readFile("scripts/ops/account-usage-grouped-rpc.sql"),
     ),
     "20260817120000_account-session-states.sql (leaderboard_hourly_dedup_v2)": extractSqlAccountSources(
-      readFile("migrations/20260817120000_account-session-states.sql"),
+      readFile("../server/migrations/20260817120000_account-session-states.sql"),
     ),
     "tokentracker-leaderboard-profile.ts": extractJsSet(
       readFile("dashboard/edge-patches/tokentracker-leaderboard-profile.ts"),

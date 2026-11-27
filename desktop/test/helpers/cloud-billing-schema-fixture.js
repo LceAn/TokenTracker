@@ -2,7 +2,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { functionSql } = require("./cloud-usage-archive-fixture");
-const migration = name => fs.readFileSync(path.join(__dirname, "../../migrations", name), "utf8");
+const migration = name => fs.readFileSync(path.join(__dirname, "../../../server/migrations", name), "utf8");
 async function installCloudBillingSchema(db, { afterSubscriptions } = {}) {
   await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE project_admin BYPASSRLS;
     CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);

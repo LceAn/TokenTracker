@@ -4,8 +4,8 @@ const path = require('node:path');
 const test = require('node:test');
 
 const root = path.resolve(__dirname, '..');
-const ci = fs.readFileSync(path.join(root, '.github/workflows/ci.yml'), 'utf8');
-const release = fs.readFileSync(path.join(root, '.github/workflows/release-dmg.yml'), 'utf8');
+const ci = fs.readFileSync(path.join(root, '../.github/workflows/ci.yml'), 'utf8');
+const release = fs.readFileSync(path.join(root, '../.github/workflows/release-dmg.yml'), 'utf8');
 const validatorPath = path.join(root, 'TokenTrackerLinux/scripts/validate-package.sh');
 const pkgbuild = fs.readFileSync(
   path.join(root, 'TokenTrackerLinux/packaging/arch/tokentracker-linux/PKGBUILD'),
@@ -149,7 +149,7 @@ test('release verifies every managed version file via the shared registry', () =
 
 test('no workflow or doc still references the old release workflow name', () => {
   const files = [
-    '.github/workflows/release-dmg.yml',
+    '../.github/workflows/release-dmg.yml',
     'CLAUDE.md',
     'docs/opencode-go-limits.md',
   ];

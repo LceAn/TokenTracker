@@ -475,12 +475,12 @@ function readRepoFile(rel) {
 }
 
 test("SQL pin: replace_v2 rebuilds closed days from leaderboard_hourly_dedup_v2 (which reads trae-cn session states)", () => {
-  const sql = readRepoFile("migrations/20260804043427_align-leaderboard-machine-clusters.sql");
+  const sql = readRepoFile("../server/migrations/20260804043427_align-leaderboard-machine-clusters.sql");
   const replaceFn = sql.split("CREATE OR REPLACE FUNCTION public.leaderboard_rollup_daily_replace_v2")[1].split("$func$;")[0];
   assert.match(replaceFn, /DELETE FROM public\.tokentracker_leaderboard_rollup_daily_v2/, "a rebuild DELETEs the materialized day (downward/model corrections clean up)");
   assert.match(replaceFn, /FROM public\.leaderboard_hourly_dedup_v2\(v_day, v_day \+ interval '1 day'\)/, "days are re-aggregated from the dedup function");
 
-  const sessionStates = readRepoFile("migrations/20260817120000_account-session-states.sql");
+  const sessionStates = readRepoFile("../server/migrations/20260817120000_account-session-states.sql");
   const dedupFn = sessionStates.split("CREATE OR REPLACE FUNCTION public.leaderboard_hourly_dedup_v2")[1].split("$func$;")[0];
   assert.match(dedupFn, /FROM tokentracker_account_session_states s/, "the dedup function's trae-cn branch reads canonical session states");
   assert.match(dedupFn, /s\.source = 'trae-cn'/);
@@ -489,7 +489,7 @@ test("SQL pin: replace_v2 rebuilds closed days from leaderboard_hourly_dedup_v2 
 test("SQL pin: advance_v2 (superseding definition) repairs 7 days per run, cyclically, with first-seed gap prioritization", () => {
   // The 20260817120000 migration supersedes the 0804 advance_v2: pin the
   // LATEST definition the deployment will actually leave in the database.
-  const sql = readRepoFile("migrations/20260817120000_account-session-states.sql");
+  const sql = readRepoFile("../server/migrations/20260817120000_account-session-states.sql");
   const advanceFn = sql.split("CREATE OR REPLACE FUNCTION public.leaderboard_rollup_daily_advance_v2")[1].split("$func$;")[0];
   assert.match(advanceFn, /interval '7 days'/, "7 days per scheduled run (catch-up AND repair)");
   assert.match(advanceFn, /v_min_day/, "repair starts at the oldest history day");
@@ -506,7 +506,7 @@ test("SQL pin: advance_v2 (superseding definition) repairs 7 days per run, cycli
 });
 
 test("SQL pin: leaderboard TOTAL reads rollup UNION live tail; bounded windows read live", () => {
-  const sql = readRepoFile("migrations/20260804043427_align-leaderboard-machine-clusters.sql");
+  const sql = readRepoFile("../server/migrations/20260804043427_align-leaderboard-machine-clusters.sql");
   const groupedFn = sql.split("CREATE OR REPLACE FUNCTION public.leaderboard_usage_grouped")[1].split("$func$;")[0];
   assert.match(groupedFn, /FROM public\.tokentracker_leaderboard_rollup_daily_v2 r/, "total = materialized rollup...");
   assert.match(groupedFn, /FROM public\.leaderboard_hourly_dedup_v2\(v_through, p_to\) t/, "...UNION the live tail");

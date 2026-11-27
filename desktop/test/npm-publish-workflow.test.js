@@ -7,11 +7,12 @@ const { assertReleaseVersion } = require("../scripts/version-files.cjs");
 const WORKFLOW_PATH = path.join(
   __dirname,
   "..",
+  "..",
   ".github",
   "workflows",
   "npm-publish.yml"
 );
-const CI_WORKFLOW_PATH = path.join(__dirname, "..", ".github", "workflows", "ci.yml");
+const CI_WORKFLOW_PATH = path.join(__dirname, "..", "..", ".github", "workflows", "ci.yml");
 
 function loadWorkflow() {
   return fs.readFileSync(WORKFLOW_PATH, "utf8");

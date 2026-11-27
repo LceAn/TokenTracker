@@ -18,7 +18,7 @@ test("zero-amount card checks are durable, private, immutable evidence and never
     for (const migration of ["20261003120000_cloud-subscriptions.sql", "20261007120000_cloud-waffo.sql",
       "20261007130000_cloud-waffo-retry.sql", "20261007140000_cloud-waffo-attempts.sql",
       "20261007150000_cloud-waffo-authorizations.sql"]) {
-      await db.exec(fs.readFileSync(path.join(__dirname,"../migrations",migration),"utf8"));
+      await db.exec(fs.readFileSync(path.join(__dirname,"../../server/migrations",migration),"utf8"));
     }
     await db.exec("UPDATE tokentracker_cloud_policy SET phase='active',launch_at=now() WHERE environment='sandbox'");
     const userId = randomUUID();

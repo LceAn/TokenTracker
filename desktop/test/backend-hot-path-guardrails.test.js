@@ -8,10 +8,10 @@ const test = require("node:test");
 const ROOT = path.resolve(__dirname, "..");
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 const readMigrationBySuffix = (suffix) => {
-  const file = fs.readdirSync(path.join(ROOT, "migrations"))
+  const file = fs.readdirSync(path.join(ROOT, "..", "server", "migrations"))
     .find((name) => name.endsWith(`_${suffix}.sql`));
   assert.ok(file, `missing migration ending in _${suffix}.sql`);
-  return read(`migrations/${file}`);
+  return read(`../server/migrations/${file}`);
 };
 
 const ACCOUNT_FUNCTIONS = [
@@ -142,7 +142,7 @@ test("account wire RPCs wrap the existing compact aggregation and stay project_a
 });
 
 test("shared account cache is bounded, locked per key, and access controlled", () => {
-  const source = read("migrations/20260718071507_add-shared-account-usage-cache.sql");
+  const source = read("../server/migrations/20260718071507_add-shared-account-usage-cache.sql");
   assert.match(source, /CREATE UNLOGGED TABLE public\.tokentracker_account_usage_cache/u);
   assert.match(source, /CREATE OR REPLACE FUNCTION public\.account_usage_grouped_cached/u);
   assert.match(source, /interval '30 seconds'/u);
@@ -426,7 +426,7 @@ test("leaderboard refresh reconciles stale rows after the replacement snapshot i
 });
 
 test("leaderboard anti-cheat workflow verifies database-native scans, reconciles exclusions, and never leaks identities", () => {
-  const workflow = read(".github/workflows/leaderboard-anticheat.yml");
+  const workflow = read("../.github/workflows/leaderboard-anticheat.yml");
   assert.match(
     workflow,
     /cron: "53 \* \* \* \*"/u,
@@ -465,7 +465,7 @@ test("leaderboard anti-cheat workflow verifies database-native scans, reconciles
 
 test("anti-cheat health reports database-native scan freshness before protected snapshot refresh", () => {
   const source = read("dashboard/edge-patches/tokentracker-leaderboard-refresh.ts");
-  const migration = read("migrations/20260812115221_observe-database-anticheat-scans.sql");
+  const migration = read("../server/migrations/20260812115221_observe-database-anticheat-scans.sql");
   const authorizationGuard = source.indexOf('authorization !== "privileged"');
   const periodLoop = source.indexOf("for (const period of periods)");
 
@@ -498,7 +498,7 @@ test("database-native anti-cheat detector has a bounded hourly scan budget", () 
 });
 
 test("anti-cheat responder atomically reconciles snapshots only when the moderation queue changed", () => {
-  const workflow = read(".github/workflows/leaderboard-anticheat.yml");
+  const workflow = read("../.github/workflows/leaderboard-anticheat.yml");
   const source = read("dashboard/edge-patches/tokentracker-leaderboard-refresh.ts");
   const migration = readMigrationBySuffix("reconcile-anticheat-snapshot-exclusions");
 
@@ -594,7 +594,7 @@ test("telemetry heartbeat uses one atomic database upsert RPC", () => {
 });
 
 test("device creation absorbs concurrent unique-key races without database errors", () => {
-  const migration=read("migrations/20261004120000_cloud-machine-access.sql");
+  const migration=read("../server/migrations/20261004120000_cloud-machine-access.sql");
   for (const file of ["tokentracker-device-token-issue.ts", "tokentracker-device-flow-poll.ts"]) {
     const source = read(`dashboard/edge-patches/${file}`);
     assert.match(
@@ -614,7 +614,7 @@ test("desktop auto refresh does not poll cloud account aggregates every 30 secon
 });
 
 test("backend hardening migration adds hot-path RPCs, index, and execute ACLs", () => {
-  const source = read("migrations/20260717013000_harden-backend-hot-paths.sql");
+  const source = read("../server/migrations/20260717013000_harden-backend-hot-paths.sql");
   assert.match(source, /CREATE OR REPLACE FUNCTION public\.account_usage_grouped_v2/u);
   assert.match(source, /CREATE OR REPLACE FUNCTION public\.leaderboard_user_metadata/u);
   assert.match(source, /CREATE OR REPLACE FUNCTION public\.upsert_tokentracker_telemetry_daily/u);
@@ -625,7 +625,7 @@ test("backend hardening migration adds hot-path RPCs, index, and execute ACLs", 
 });
 
 test("unused direct profile-like table grants stay revoked", () => {
-  const source = read("migrations/20260717015500_revoke-unused-profile-like-grants.sql");
+  const source = read("../server/migrations/20260717015500_revoke-unused-profile-like-grants.sql");
   assert.match(
     source,
     /REVOKE ALL ON public\.tokentracker_profile_likes FROM anon, authenticated;/u,
