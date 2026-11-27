@@ -676,6 +676,11 @@ settings.menubar.syncing,ui,SettingsPage,SettingsPage,mb_syncing,"Syncing…",,a
 settings.menubar.updates,ui,SettingsPage,SettingsPage,mb_updates,"Updates",,active
 settings.menubar.autoUpdate,ui,SettingsPage,MenuBarSection,mb_auto_update,"Automatic updates",,active
 settings.menubar.autoUpdateHint,ui,SettingsPage,MenuBarSection,mb_auto_update_hint,"Download and install new versions in the background. Manual checks stay available when this is off.",,active
+settings.menubar.updateChannel,ui,SettingsPage,MenuBarSection,mb_update_channel,"Update channel",,active
+settings.menubar.updateChannel.fork,ui,SettingsPage,MenuBarSection,mb_update_channel_fork,"Community fork (LceAn/TokenTracker)",,active
+settings.menubar.updateChannel.official,ui,SettingsPage,MenuBarSection,mb_update_channel_official,"Official release (xiufengsun/TokenTracker)",,active
+settings.menubar.updateChannelHint.fork,ui,SettingsPage,MenuBarSection,mb_update_channel_hint_fork,"Follow the community fork's releases. This is the fork build, so its extra features are kept.",,active
+settings.menubar.updateChannelHint.official,ui,SettingsPage,MenuBarSection,mb_update_channel_hint_official,"Follow the official releases. The next update replaces this fork build with the official version and removes the fork-only features; you confirm before anything is installed. To come back, install the fork's setup again.",,active
 settings.menubar.checkUpdates,ui,SettingsPage,SettingsPage,mb_check_updates,"Check for updates",,active
 settings.footer.statusPage,ui,SettingsPage,NativeAppFooter,status_page,"System status",,active
 menubar.slot.primary,ui,WidgetsPage,MenuBarDisplayCard,slot_primary,"Primary slot",,active

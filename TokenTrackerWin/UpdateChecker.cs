@@ -64,14 +64,49 @@ internal sealed class UpdateChecker
 
     private readonly UpdateReleaseClient _releaseClient;
     private readonly object _operationLock = new();
+    private readonly InstalledRelease _installed;
+    private readonly Func<InstalledRelease, UpdateChannel> _channel;
 
-    public UpdateChecker(HttpClient? releaseHttp = null) => _releaseClient = new(releaseHttp ?? Http);
+    /// <param name="releaseHttp">HTTP client for release lookups; the shared one when null.</param>
+    /// <param name="channel">Decides which channel to follow. Defaults to the channel this build came from.</param>
+    /// <param name="installed">The release this build came from. Read from the assembly when null.</param>
+    public UpdateChecker(HttpClient? releaseHttp = null, Func<InstalledRelease, UpdateChannel>? channel = null, InstalledRelease? installed = null)
+    {
+        _releaseClient = new(releaseHttp ?? Http);
+        _installed = installed ?? InstalledRelease.FromInformationalVersion(
+            Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
+            ResolveCurrentVersion());
+        _channel = channel ?? (build => build.Channel);
+    }
 
     private string? _setupUrl;
     private long _setupSize;
     private string? _checksumsUrl;
+    private UpdateChannel? _pendingChannel;
 
-    public string CurrentVersion { get; } = ResolveCurrentVersion();
+    /// <summary>Upstream version of this build ("1.5.28"), without the fork suffix.</summary>
+    public string CurrentVersion => _installed.Version;
+
+    /// <summary>Version to show the user: "1.5.28-fork.1" for a fork build, otherwise <see cref="CurrentVersion"/>.</summary>
+    public string DisplayVersion => _installed.DisplayVersion;
+
+    /// <summary>The channel the next check follows.</summary>
+    public UpdateChannel Channel => _channel(_installed);
+
+    /// <summary>
+    /// Whether the user may pick a channel. Only a fork build knows the fork
+    /// exists; an official build keeps a single channel.
+    /// </summary>
+    public bool CanChooseChannel => _installed.Channel == UpdateChannel.Fork;
+
+    /// <summary>
+    /// The pending release comes from another channel than this build. Installing
+    /// it replaces the build family, so it is never installed unattended.
+    /// </summary>
+    public bool PendingReleaseCrossesChannels
+        => State == UpdateState.UpdateAvailable && _pendingChannel is { } pending && pending != _installed.Channel;
+
+    public string ReleasePageUrl => Channel.ReleasePageUrl;
 
     // ── Public API ─────────────────────────────────────────────────────
 
@@ -114,28 +149,31 @@ internal sealed class UpdateChecker
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-            var release = await _releaseClient.FetchLatestAsync(cts.Token).ConfigureAwait(false);
+            var release = await _releaseClient.FetchLatestAsync(Channel, cts.Token).ConfigureAwait(false);
             var latest = release.Version;
-            if (CompareVersions(CurrentVersion, latest) < 0)
+            if (UpdateDecision.IsUpdate(_installed, release.Channel, release.BaseVersion, release.ForkRevision))
             {
                 LatestVersion = latest;
                 _setupUrl = release.SetupUrl;
                 _setupSize = release.SetupSize;
                 _checksumsUrl = release.ChecksumsUrl;
+                _pendingChannel = release.Channel;
                 SetState(UpdateState.UpdateAvailable);
-                Diag.Log("update", $"update available current={CurrentVersion} latest={latest}");
-                if (silent && AutoUpdatePolicy.IsEnabled())
+                Diag.Log("update", $"update available current={DisplayVersion} latest={latest} channel={release.Channel.Id}");
+                // The launch-time check is the unattended path. Start the same
+                // resumable installer flow used by the tray action; it asks the
+                // tray to quit only after the download is complete. A release from
+                // another channel is never installed this way: it stays pending in
+                // the tray until the user confirms it.
+                if (silent && AutoUpdatePolicy.IsEnabled() && release.Channel == _installed.Channel)
                 {
-                    // The launch-time check is the unattended path. Start the same
-                    // resumable installer flow used by the tray action; it asks the
-                    // tray to quit only after the download is complete.
                     _ = DownloadAndInstallAsync();
                 }
                 return CheckOutcome.UpdateAvailable;
             }
 
             SetState(UpdateState.Idle);
-            Diag.Log("update", $"up to date current={CurrentVersion} latest={latest}");
+            Diag.Log("update", $"up to date current={DisplayVersion} latest={latest}");
             return CheckOutcome.UpToDate;
         }
         catch (Exception ex)
@@ -143,6 +181,26 @@ internal sealed class UpdateChecker
             Diag.Log("update", $"check failed: {ex.Message}");
             SetState(UpdateState.Idle);
             return CheckOutcome.Failed;
+        }
+    }
+
+    /// <summary>
+    /// Forget a pending release so the next check starts over, for instance after
+    /// the channel changed. Returns false, changing nothing, while a check,
+    /// download or installation is in flight.
+    /// </summary>
+    public bool Reset()
+    {
+        lock (_operationLock)
+        {
+            if (State is UpdateState.Checking or UpdateState.Downloading or UpdateState.Installing) return false;
+            LatestVersion = null;
+            _setupUrl = null;
+            _setupSize = 0;
+            _checksumsUrl = null;
+            _pendingChannel = null;
+            SetState(UpdateState.Idle);
+            return true;
         }
     }
 
@@ -407,7 +465,7 @@ internal sealed class UpdateChecker
     }
 
     /// <summary>Numeric dotted compare. Returns &lt;0 if a&lt;b, 0 if equal, &gt;0 if a&gt;b.</summary>
-    private static int CompareVersions(string a, string b)
+    internal static int CompareVersions(string a, string b)
     {
         var pa = a.Split('.');
         var pb = b.Split('.');

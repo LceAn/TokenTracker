@@ -11,6 +11,12 @@ import { cn } from "../../lib/cn";
 import { isNativeWindowsApp } from "../../lib/native-bridge.js";
 import { SectionCard, SettingsRow, ToggleSwitch } from "./Controls.jsx";
 import { Button } from "../../ui/components/Button.jsx";
+import { Select } from "../../ui/components";
+
+// Where browser / CLI mode looks for releases. The native apps have their own
+// updater; this only serves the footer shown when that bridge is absent. A
+// community-fork build points it at the fork's repository at build time.
+const RELEASE_REPO = import.meta.env.VITE_RELEASE_REPO || "xiufengsun/TokenTracker";
 
 export function MenuBarSection() {
   const { available, settings, setSetting, runAction } = useNativeSettings();
@@ -28,6 +34,17 @@ export function MenuBarSection() {
   const updateStatus = settings?.updateStatus || null;
   const updateBusy = Boolean(settings?.updateBusy);
   const isSyncing = Boolean(settings?.isSyncing);
+  // Only a fork build offers a choice (updateChannelSupported); it follows its
+  // own releases unless the user picks the official ones.
+  const updateChannelSupported = settings?.updateChannelSupported === true;
+  const updateChannel = settings?.updateChannel === "official" ? "official" : "fork";
+  const updateChannelOptions = [
+    { value: "fork", label: copy("settings.menubar.updateChannel.fork") },
+    { value: "official", label: copy("settings.menubar.updateChannel.official") },
+  ];
+  const updateChannelHint = updateChannel === "official"
+    ? copy("settings.menubar.updateChannelHint.official")
+    : copy("settings.menubar.updateChannelHint.fork");
 
   return (
     <SectionCard title={copy("settings.section.menubar")}>
@@ -113,6 +130,22 @@ export function MenuBarSection() {
           />
         }
       />
+      {updateChannelSupported ? (
+        <SettingsRow
+          label={copy("settings.menubar.updateChannel")}
+          hint={updateChannelHint}
+          control={
+            <Select
+              value={updateChannel}
+              onValueChange={(value) => setSetting("updateChannel", value)}
+              options={updateChannelOptions}
+              ariaLabel={copy("settings.menubar.updateChannel")}
+              disabled={updateBusy}
+              className="px-3 py-1.5 text-xs font-medium"
+            />
+          }
+        />
+      ) : null}
       <SettingsRow
         label={copy("settings.menubar.updates")}
         hint={updateStatus || undefined}
@@ -133,19 +166,27 @@ export function MenuBarSection() {
   );
 }
 
+// Accepts "v1.5.28" and fork tags such as "v1.5.28-fork.2". Anything else is not
+// an update: a tag that cannot be parsed must never turn into a download prompt.
+function parseReleaseVersion(value) {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-fork\.(\d+))?$/.exec(
+    String(value || "").trim(),
+  );
+  if (!match) return null;
+  return {
+    base: match.slice(1, 4).map(Number),
+    fork: match[4] === undefined ? -1 : Number(match[4]),
+  };
+}
+
 function hasUpdate(current, latest) {
-  function parseParts(v) {
-    return v.replace(/^v/, "").split(".").map(Number);
+  const curr = parseReleaseVersion(current);
+  const late = parseReleaseVersion(latest);
+  if (!curr || !late) return false;
+  for (let i = 0; i < curr.base.length; i += 1) {
+    if (curr.base[i] !== late.base[i]) return curr.base[i] < late.base[i];
   }
-  const currParts = parseParts(current);
-  const lateParts = parseParts(latest);
-  for (let i = 0; i < Math.max(currParts.length, lateParts.length); i++) {
-    const curr = currParts[i] || 0;
-    const late = lateParts[i] || 0;
-    if (curr < late) return true;
-    if (curr > late) return false;
-  }
-  return false;
+  return late.fork > curr.fork;
 }
 
 export function NativeAppFooter() {
@@ -164,7 +205,7 @@ export function NativeAppFooter() {
   const handleCheckUpdates = async () => {
     setChecking(true);
     try {
-      const res = await fetch("https://api.github.com/repos/xiufengsun/TokenTracker/releases/latest");
+      const res = await fetch(`https://api.github.com/repos/${RELEASE_REPO}/releases/latest`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       const latestVersion = data.tag_name;
