@@ -18,6 +18,7 @@
 | `test/`、`scripts/` | 测试、校验器和构建脚本 |
 | `docs/` | 上游的内部文档 |
 | `FORK_REVISION` | 本分支的修订号，发布 Windows 版时使用 |
+| `LICENSE`、`THIRD_PARTY_NOTICES.md` | npm 包的许可文件，打包脚本会读取。`LICENSE` 与仓库根目录的那份内容相同 |
 
 这些目录在仓库里的位置变了，但每个目录内部的布局和上游完全相同，所以上游的构建说明、各目录下的 README 和 `CLAUDE.md` 里的命令都照常适用，只是要先进入 `desktop/`：
 
@@ -48,6 +49,7 @@ This is everything that runs on the user's machine: local collection, the local 
 | `test/`, `scripts/` | tests, validators and build scripts |
 | `docs/` | upstream's internal documents |
 | `FORK_REVISION` | this fork's revision number, used when releasing the Windows build |
+| `LICENSE`, `THIRD_PARTY_NOTICES.md` | the npm package's license files, which the build scripts read. `LICENSE` is identical to the copy at the repository root |
 
 These directories moved, but the layout inside each one is exactly upstream's. Upstream's build instructions, the README in each directory, and the commands in `CLAUDE.md` all still apply; you just start from `desktop/`:
 

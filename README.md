@@ -73,6 +73,6 @@ server/    服务端：可以自己部署的云端（安装器、数据库结构
 
 ## 许可
 
-MIT License。上游的版权声明完整保留在 [LICENSE](LICENSE)，本分支新增的内容同样以 MIT 协议发布。
+MIT License。上游的版权声明完整保留在 [LICENSE](LICENSE)，本分支新增的内容同样以 MIT 协议发布。第三方依赖的许可声明在 [desktop/THIRD_PARTY_NOTICES.md](desktop/THIRD_PARTY_NOTICES.md)。
 
 感谢原作者 @xiufengsun 和所有上游贡献者，本分支的一切都建立在他们的工作之上。

@@ -23,6 +23,7 @@ server/    服务端：可以自己部署的云端，见 server/README.md
 | `test/`、`scripts/` | 测试、校验器和构建脚本 |
 | `docs/` | 上游的内部文档 |
 | `CLAUDE.md` | 给 AI 协作工具看的项目说明，人读也有用 |
+| `LICENSE`、`THIRD_PARTY_NOTICES.md` | npm 包的许可文件。打包脚本从包的根目录读取它们；`LICENSE` 和仓库根目录的那份内容相同，上游改动时两份一起改 |
 
 `.github/workflows/` 是从上游继承的发布和运维流程。它们面向原作者的账号和基础设施，在本分支里不会运行；里面的路径仍按上游的目录结构书写，没有跟着本次重组修改。
 
@@ -141,6 +142,7 @@ server/    the server: the cloud you can deploy yourself; see server/README.en.m
 | `test/`, `scripts/` | tests, validators and build scripts |
 | `docs/` | upstream's internal documents |
 | `CLAUDE.md` | project notes written for AI coding tools; useful for people too |
+| `LICENSE`, `THIRD_PARTY_NOTICES.md` | the npm package's license files. Build scripts read them from the package root; `LICENSE` is identical to the copy at the repository root, and an upstream change to it has to reach both |
 
 `.github/workflows/` holds the release and operations workflows inherited from upstream. They target the original author's accounts and infrastructure and do not run in this fork. Their paths still follow upstream's layout and were not changed by the restructure.
 

@@ -73,6 +73,6 @@ Usage questions, deployment problems and suggestions are welcome as [issues](htt
 
 ## License
 
-MIT License. The upstream copyright notice is preserved in full in [LICENSE](LICENSE); additions in this fork are released under the same license.
+MIT License. The upstream copyright notice is preserved in full in [LICENSE](LICENSE); additions in this fork are released under the same license. The license notices of third-party dependencies are in [desktop/THIRD_PARTY_NOTICES.md](desktop/THIRD_PARTY_NOTICES.md).
 
 Thanks to the original author @xiufengsun and every upstream contributor. This fork is built entirely on their work.
