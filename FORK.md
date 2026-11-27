@@ -26,17 +26,29 @@ Token Tracker 的全部基础能力——本地解析、用量统计、桌面客
 | 当前服务器状态 | 打开设置时自动检查当前后端，显示「已连接」或「服务器不可达」；地址没写协议时自动补上 `https://` | [#1086](https://github.com/xiufengsun/TokenTracker/pull/1086) |
 | 「关于」页面 | 「设置 → 应用 → 关于」：项目介绍、版本、许可证和贡献者列表 | [#1081](https://github.com/xiufengsun/TokenTracker/pull/1081) |
 | 标题字号修复 | 云服务子页面左上角的「设置」标题比其他子页面小，已修正 | [#1079](https://github.com/xiufengsun/TokenTracker/pull/1079) |
+| 更新渠道可选（仅 Windows） | 在「设置 → App 与更新」里选择跟随本分支还是官方版本的发布，见[下一节](#更新渠道仅-windows) | 仅本分支 |
 
 这些 PR 现在是否已被上游合并，请以上游页面为准。
 
 另外，[#1087](https://github.com/xiufengsun/TokenTracker/pull/1087)（在会话页面里浏览 pi 的会话）已经由上游作者自己实现并合入（[#1071](https://github.com/xiufengsun/TokenTracker/pull/1071)），所以本分支不需要再保留它。
 
+### 更新渠道（仅 Windows）
+
+Windows 客户端可以在「设置 → App 与更新 → 更新渠道」里选择：
+
+- **社区分支**（默认）：跟随本分支的发布。
+- **官方版本**：跟随上游的官方发布。选中后，下一次更新会把社区分支版本替换成官方版本，社区分支独有的功能会被移除。安装前一定会让你确认，不会在后台自己换掉。
+
+从社区分支换到官方版本之后，官方客户端不认识本分支，想换回来需要重新下载本分支的安装包安装。
+
+macOS 和 Linux 客户端没有这个选项，它们的应用仍然只跟随官方发布。
+
 ### 怎么维护
 
 - **以上游为基线。** `main` 分支 = 上游 `main` 的代码 + 上表的改动。本分支于 2026-11-26 建立，基于上游 v1.5.28。
-- **每周同步一次。** 把上游 `main` 上的新功能和修复合并进来，完整测试通过后推送，和上游版本的差距不超过一周。
+- **每周同步一次。** 把上游 `main` 上的新功能和修复合并进来，测试通过后推送，和上游版本的差距不超过一周。
 - **同步记录可查。** 每次同步是一个合并提交，标题形如 `chore(fork): sync upstream vX.Y.Z`。想知道本分支包含到上游的哪个版本，看最近一次同步提交即可。
-- **改动尽量少、互相独立。** 功能改动保持「可以直接作为 PR 提交给上游」的形态；只有本文件和各 README 顶部的说明是本分支专属的内容。
+- **改动尽量少、互相独立。** 功能改动保持「可以直接作为 PR 提交给上游」的形态；本分支专属的是这个文件、各 README 顶部的说明、更新渠道和发布脚本。
 - **上游合并了，就交还给上游。** 表里的 PR 一旦被上游合并，对应改动会在下一次同步时成为上游代码的一部分，本分支不再单独维护。
 
 每周同步的步骤（假设 `upstream` 指向原仓库，`origin` 指向本分支）：
@@ -45,16 +57,28 @@ Token Tracker 的全部基础能力——本地解析、用量统计、桌面客
 git fetch upstream main
 git switch main
 git merge --no-ff upstream/main -m "chore(fork): sync upstream vX.Y.Z"  # 有冲突就解决后 git merge --continue
-npm test && npm run validate:copy && npm run validate:locale && npm run validate:ui-hardcode
+npm run validate:copy && npm run validate:locale && npm run validate:ui-hardcode && npm run validate:versions
 npm --prefix dashboard run test && npm --prefix dashboard run build
 git push origin main
 ```
 
+`npm test` 是上游的完整服务端测试，需要数据库等环境；在 Windows 上有一部分上游测试本身就跑不过。
+
+**发布 Windows 版。** 版本号是「上游版本 + `-fork.<修订号>`」，例如 `1.5.29-fork.1`。修订号记在仓库根目录的 `FORK_REVISION`，每次发布加一；上游的版本号文件保持和上游一致，所以同步时不会在版本号上冲突。先提交所有改动，再在仓库根目录运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File TokenTrackerWin\scripts\build-fork-release.ps1
+```
+
+脚本会跑测试和校验、构建前端、打包 Node 运行时和 CLI、发布、生成压缩包、安装包和校验文件，放在 `TokenTrackerWin\installer\Output\<版本号>\`。它只负责构建，不打标签也不发布；需要本机装有 .NET 8 SDK 和 Inno Setup 6。
+
 ### 怎么获取
 
-**目前只有源码（`main` 分支）。** 没有发布安装包，也没有发布到 npm 或 Homebrew——README 里的安装命令装的都是官方版本，不包含上表的改动。构建方式与上游相同，见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+**Windows：** 到 [Releases](https://github.com/LceAn/TokenTracker/releases) 下载 `TokenTracker-Setup.exe`，不需要管理员权限。它和官方版用同一个安装位置和产品标识，会原地替换对方，不会动你的数据目录。已安装的社区分支版本可以在设置里检查更新。
 
-**已知事项：** 客户端的自动更新目前写死指向官方发布渠道（Windows 和 macOS 都是）。用本分支的源码自行构建时，一旦上游发布新版本，更新提示会引导安装官方版本。
+**macOS 和 Linux：** 没有安装包，只能从源码自行构建，方式与上游相同，见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+
+README 里的安装命令（npm、Homebrew 等）装的都是官方版本，不包含上表的改动。
 
 ### 反馈
 
@@ -92,17 +116,29 @@ We submitted a set of PRs for that. They pass tests and were reworked after revi
 | Current server status | Opening Settings checks the active backend and shows Connected or Server unreachable; an address without a scheme gets `https://` added | [#1086](https://github.com/xiufengsun/TokenTracker/pull/1086) |
 | About page | Settings → App → About: project introduction, version, license and the contributor list | [#1081](https://github.com/xiufengsun/TokenTracker/pull/1081) |
 | Title size fix | The Settings title on the Cloud sub-page was smaller than on every other sub-page | [#1079](https://github.com/xiufengsun/TokenTracker/pull/1079) |
+| Choice of update channel (Windows only) | Settings → App & Updates picks whether the app follows this fork's releases or the official ones; see [below](#update-channel-windows-only) | This fork only |
 
 Check the PR pages for whether upstream has merged them since.
 
 [#1087](https://github.com/xiufengsun/TokenTracker/pull/1087) (browsing pi sessions in the Sessions page) is not carried here: the upstream author implemented and merged it himself ([#1071](https://github.com/xiufengsun/TokenTracker/pull/1071)).
 
+### Update channel (Windows only)
+
+The Windows app has an **Update channel** row under Settings → App & Updates:
+
+- **Community fork** (the default): follows this fork's releases.
+- **Official release**: follows the upstream releases. The next update then replaces the fork build with the official version, which removes the features that exist only in the fork. You are always asked to confirm first; it never switches on its own in the background.
+
+Once you are on the official release, the official app does not know about this fork. To come back, download this fork's installer and run it again.
+
+The macOS and Linux apps do not have this option and keep following the official releases.
+
 ### How it is maintained
 
 - **Upstream is the baseline.** `main` = upstream `main` + the changes above. The fork was created on 2026-11-26 from upstream v1.5.28.
-- **Synced once a week.** New upstream features and fixes are merged in, the full test suite is run, and the result is pushed. The fork stays within a week of upstream.
+- **Synced once a week.** New upstream features and fixes are merged in, tested, and pushed. The fork stays within a week of upstream.
 - **Every sync is visible.** Each sync is one merge commit titled `chore(fork): sync upstream vX.Y.Z`; the most recent one tells you which upstream version the fork includes.
-- **Changes stay small and independent.** Feature changes are kept in a form that can be submitted upstream as a PR. Only this file and the notice at the top of each README are fork-only content.
+- **Changes stay small and independent.** Feature changes are kept in a form that can be submitted upstream as a PR. Fork-only content is this file, the notice at the top of each README, the update channel and the release script.
 - **Merged upstream means handed back.** Once one of the PRs above merges upstream, the next sync brings it in as upstream code and the fork stops carrying it separately.
 
 Weekly sync procedure (assuming `upstream` is the original repository and `origin` is this fork):
@@ -111,16 +147,28 @@ Weekly sync procedure (assuming `upstream` is the original repository and `origi
 git fetch upstream main
 git switch main
 git merge --no-ff upstream/main -m "chore(fork): sync upstream vX.Y.Z"  # on conflicts: resolve, then git merge --continue
-npm test && npm run validate:copy && npm run validate:locale && npm run validate:ui-hardcode
+npm run validate:copy && npm run validate:locale && npm run validate:ui-hardcode && npm run validate:versions
 npm --prefix dashboard run test && npm --prefix dashboard run build
 git push origin main
 ```
 
+`npm test` is upstream's full server-side suite and needs a database and other services; on Windows some upstream tests cannot pass in the first place.
+
+**Releasing the Windows build.** The version is "upstream version + `-fork.<revision>`", for example `1.5.29-fork.1`. The revision lives in `FORK_REVISION` at the repository root and is bumped for each release. Upstream's version files stay identical to upstream, so a sync never conflicts on a version number. Commit everything first, then run from the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File TokenTrackerWin\scripts\build-fork-release.ps1
+```
+
+The script runs the tests and validators, builds the dashboard, bundles the Node runtime and CLI, publishes, and writes the zip, the installer and the checksums to `TokenTrackerWin\installer\Output\<version>\`. It only builds: it does not tag or publish. It needs the .NET 8 SDK and Inno Setup 6.
+
 ### How to get it
 
-**Source only, for now (`main` branch).** There are no prebuilt installers, and nothing is published to npm or Homebrew — the install commands in the README install the official release, without the changes above. Building works the same way as upstream; see [CONTRIBUTING.md](./CONTRIBUTING.md).
+**Windows:** download `TokenTracker-Setup.exe` from [Releases](https://github.com/LceAn/TokenTracker/releases). It does not need administrator rights. It shares the official app's install location and product identity, so the two replace each other in place, and it leaves your data directory alone. An installed fork build can check for updates from Settings.
 
-**Known issue:** the apps' auto-update check is hardcoded to the official release channel (Windows and macOS). If you build from this fork yourself, update prompts will offer the official version as soon as upstream ships a newer release.
+**macOS and Linux:** there are no installers; build from source the same way as upstream (see [CONTRIBUTING.md](./CONTRIBUTING.md)).
+
+The install commands in the README (npm, Homebrew and so on) install the official release, without the changes above.
 
 ### Feedback
 
