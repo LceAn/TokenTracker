@@ -75,8 +75,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private Font? _menuFont;
     private Font? _summaryFont;
 
-    private readonly UpdateChecker _updateChecker = new();
+    // Follows the channel the user picked in Settings; defaults to the channel
+    // this build came from.
+    private readonly UpdateChecker _updateChecker = new(channel: installed => UpdateChannelPolicy.GetSelected(installed.Channel));
     private UpdateStrings _updateStrings = UpdateStrings.For(NativeLocalization.CurrentResolvedLocale);
+    private UpdateChannelStrings _updateChannelStrings = UpdateChannelStrings.For(NativeLocalization.CurrentResolvedLocale);
     private bool _updateBalloonShown;
 
     // Theme and tray state refresh independently of WebView script execution.
@@ -345,6 +348,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         _strings = TrayStrings.For(NativeLocalization.ResolveLocale(_localePreference));
         _updateStrings = UpdateStrings.For(NativeLocalization.ResolveLocale(_localePreference));
+        _updateChannelStrings = UpdateChannelStrings.For(NativeLocalization.ResolveLocale(_localePreference));
 
         _menuFont?.Dispose();
         _summaryFont?.Dispose();
@@ -753,7 +757,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             UpdateChecker.UpdateState.Checking => _updateStrings.Checking,
             UpdateChecker.UpdateState.UpdateAvailable => string.Format(
-                _updateStrings.UpdateNow, _updateChecker.LatestVersion ?? ""),
+                _updateChecker.PendingReleaseCrossesChannels
+                    ? _updateChannelStrings.SwitchNow
+                    : _updateStrings.UpdateNow,
+                _updateChecker.LatestVersion ?? ""),
             UpdateChecker.UpdateState.Downloading => string.Format(
                 _updateStrings.Downloading, _updateChecker.ProgressPercent),
             UpdateChecker.UpdateState.Installing => _updateStrings.Installing,
@@ -764,6 +771,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             platform = "windows",
             autoUpdateEnabled = _updateChecker.AutoUpdateEnabled,
+            // Which releases to follow ("fork" / "official"). Only a fork build
+            // offers the choice; an official build has a single channel.
+            updateChannel = _updateChecker.Channel.Id,
+            updateChannelSupported = _updateChecker.CanChooseChannel,
             launchAtLogin = LaunchAtStartup.IsEnabled,
             // Startup can still be toggled from the tray menu; keep the
             // macOS-specific settings row out of the Windows page.
@@ -773,7 +784,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 or UpdateChecker.UpdateState.Downloading
                 or UpdateChecker.UpdateState.Installing,
             isSyncing = _isSyncing,
-            version = _updateChecker.CurrentVersion,
+            version = _updateChecker.DisplayVersion,
             // These capabilities are macOS-only. Omitting their controls keeps the
             // Windows settings page focused on features that are actually supported.
             dynamicIslandSupported = false,
@@ -787,6 +798,17 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             case "autoUpdateEnabled" when value is bool enabled:
                 _updateChecker.AutoUpdateEnabled = enabled;
+                break;
+            case "updateChannel" when value is string channelId && UpdateChannel.TryFromId(channelId, out var channel):
+                // Ignored while a check, download or installation is in flight;
+                // the settings push below then puts the previous value back.
+                if (_updateChecker.Reset())
+                {
+                    UpdateChannelPolicy.SetSelected(channel);
+                    // Re-check right away (never unattended) so the tray item
+                    // and the dashboard reflect the channel that was just picked.
+                    _ = Task.Run(() => _updateChecker.CheckAsync(silent: false));
+                }
                 break;
             case "launchAtLogin" when value is bool launch:
                 if (launch) LaunchAtStartup.Enable();
@@ -864,14 +886,17 @@ internal sealed class TrayApplicationContext : ApplicationContext
     /// <summary>
     /// Tray "Check for Updates" / "Update to vX". When a prior (silent) check already
     /// found a version, the item IS the update action — go straight to download+install.
-    /// Otherwise run a manual check and report the outcome via a dialog.
+    /// A release from another channel is the exception: it replaces this build
+    /// family, so it still asks first. Otherwise run a manual check and report the
+    /// outcome via a dialog.
     /// </summary>
     private void OnCheckUpdatesClicked()
     {
         switch (_updateChecker.State)
         {
             case UpdateChecker.UpdateState.UpdateAvailable:
-                _ = Task.Run(() => _updateChecker.DownloadAndInstallAsync());
+                if (!_updateChecker.PendingReleaseCrossesChannels || ConfirmCrossChannelInstall())
+                    _ = Task.Run(() => _updateChecker.DownloadAndInstallAsync());
                 break;
             case UpdateChecker.UpdateState.Idle:
                 _ = RunManualCheckAsync();
@@ -880,21 +905,30 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
+    /// <summary>Ask before replacing this build with a release from another channel.</summary>
+    private bool ConfirmCrossChannelInstall()
+        => MessageBox.Show(
+               string.Format(_updateChannelStrings.SwitchPrompt, _updateChecker.LatestVersion ?? "", _updateChecker.DisplayVersion),
+               _updateChannelStrings.SwitchTitle,
+               MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+
     private async Task RunManualCheckAsync()
     {
         var outcome = await _updateChecker.CheckAsync(silent: false);
         switch (outcome)
         {
             case UpdateChecker.CheckOutcome.UpdateAvailable:
-                var confirm = MessageBox.Show(
-                    string.Format(_updateStrings.UpdateFoundPrompt, _updateChecker.LatestVersion, _updateChecker.CurrentVersion),
-                    _updateStrings.UpdateFoundTitle,
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-                if (confirm == DialogResult.Yes) _ = Task.Run(() => _updateChecker.DownloadAndInstallAsync());
+                var confirmed = _updateChecker.PendingReleaseCrossesChannels
+                    ? ConfirmCrossChannelInstall()
+                    : MessageBox.Show(
+                        string.Format(_updateStrings.UpdateFoundPrompt, _updateChecker.LatestVersion, _updateChecker.DisplayVersion),
+                        _updateStrings.UpdateFoundTitle,
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes;
+                if (confirmed) _ = Task.Run(() => _updateChecker.DownloadAndInstallAsync());
                 break;
             case UpdateChecker.CheckOutcome.UpToDate:
                 MessageBox.Show(
-                    string.Format(_updateStrings.UpToDateMessage, _updateChecker.CurrentVersion),
+                    string.Format(_updateStrings.UpToDateMessage, _updateChecker.DisplayVersion),
                     _updateStrings.UpToDateTitle,
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 break;
@@ -908,7 +942,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                     message, _updateStrings.ErrorTitle,
                     MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
                 if (openReleasePage == DialogResult.Yes)
-                    OpenInBrowser(UpdateReleaseClient.ReleasePageUrl);
+                    OpenInBrowser(_updateChecker.ReleasePageUrl);
                 break;
             // Skipped: nothing to report.
         }
@@ -925,20 +959,27 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 _checkUpdatesItem.Enabled = false;
                 break;
             case UpdateChecker.UpdateState.UpdateAvailable:
-                _checkUpdatesItem.Text = string.Format(_updateStrings.UpdateNow, _updateChecker.LatestVersion);
+                var crossesChannels = _updateChecker.PendingReleaseCrossesChannels;
+                _checkUpdatesItem.Text = string.Format(
+                    crossesChannels ? _updateChannelStrings.SwitchNow : _updateStrings.UpdateNow,
+                    _updateChecker.LatestVersion);
                 _checkUpdatesItem.Enabled = true;
-                if (_updateChecker.AutoUpdateEnabled && _updateChecker.State == UpdateChecker.UpdateState.UpdateAvailable)
+                if (!crossesChannels && _updateChecker.AutoUpdateEnabled)
                 {
                     // An enabled automatic check will immediately start the
                     // background installer, so a "click the tray to update"
-                    // balloon would be both noisy and misleading.
+                    // balloon would be both noisy and misleading. A release from
+                    // another channel is never installed unattended, so that
+                    // one always gets the balloon.
                     break;
                 }
                 if (!_updateBalloonShown)
                 {
                     _updateBalloonShown = true;
                     _trayIcon.ShowBalloonTip(5000, Constants.AppDisplayName,
-                        string.Format(_updateStrings.NewVersionBalloon, _updateChecker.LatestVersion),
+                        string.Format(
+                            crossesChannels ? _updateChannelStrings.SwitchBalloon : _updateStrings.NewVersionBalloon,
+                            _updateChecker.LatestVersion),
                         ToolTipIcon.Info);
                 }
                 break;

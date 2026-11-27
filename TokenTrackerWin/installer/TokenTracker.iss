@@ -20,6 +20,12 @@
   #define MyAppVersion "0.0.0"
 #endif
 
+; Optional suffix for a community-fork build (e.g. -fork.1). It only tags the
+; installer file name; the version registered with Windows stays numeric.
+#ifndef ForkLabel
+  #define ForkLabel ""
+#endif
+
 #define MyAppName "TokenTracker"
 #define MyAppPublisher "TokenTracker"
 #define MyAppURL "https://www.tokentracker.cc"
@@ -42,7 +48,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 SetupIconFile=..\assets\trayicon.ico
 OutputDir=Output
-OutputBaseFilename=TokenTracker-Setup-v{#MyAppVersion}
+OutputBaseFilename=TokenTracker-Setup-v{#MyAppVersion}{#ForkLabel}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern

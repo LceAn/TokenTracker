@@ -1,6 +1,7 @@
 interface ImportMetaEnv {
   readonly DEV: boolean;
   readonly VITE_APP_VERSION?: string;
+  readonly VITE_RELEASE_REPO?: string;
   readonly APP_VERSION?: string;
   readonly VITE_TOKENTRACKER_HTTP_TIMEOUT_MS?: string;
   readonly VITE_TOKENTRACKER_MOCK?: string;

@@ -1,0 +1,12 @@
+<Project>
+  <!-- Community-fork build identity, imported by TokenTrackerWin.csproj.
+       The version files upstream keeps in sync stay untouched, so a weekly
+       upstream merge never conflicts on a version number. The fork revision
+       lives in FORK_REVISION and turns "1.5.28" into "1.5.28-fork.1", which is
+       where UpdateChecker reads the build's update channel and revision from. -->
+  <PropertyGroup>
+    <ForkRevisionFile>$(MSBuildThisFileDirectory)..\FORK_REVISION</ForkRevisionFile>
+    <ForkRevision Condition="'$(ForkRevision)' == '' and Exists('$(ForkRevisionFile)')">$([System.IO.File]::ReadAllText('$(ForkRevisionFile)').Trim())</ForkRevision>
+    <InformationalVersion Condition="'$(ForkRevision)' != ''">$(Version)-fork.$(ForkRevision)</InformationalVersion>
+  </PropertyGroup>
+</Project>
