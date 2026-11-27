@@ -1,677 +1,78 @@
-> [!NOTE]
-> **Community fork.** This repository is maintained on top of [xiufengsun/TokenTracker](https://github.com/xiufengsun/TokenTracker) (MIT). It syncs upstream **every week**, so it stays within a week of official releases, and adds community improvements on top — starting with switching the cloud backend (official / self-hosted) from Settings. It is not an official release. See [FORK.md](./FORK.md) for what differs and how it is maintained.
+# TokenTracker · 社区分支
 
- <div align="center">
+**简体中文** · [English](README.en.md)
 
-# Token Tracker
+本仓库是 [xiufengsun/TokenTracker](https://github.com/xiufengsun/TokenTracker)（作者 [@xiufengsun](https://github.com/xiufengsun)）的社区维护分支，由 [@LceAn](https://github.com/LceAn) 维护，遵循 MIT 协议。
 
-**English** · [简体中文](./README.zh-CN.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Deutsch](./README.de.md)
+Token Tracker 的全部基础能力都来自原作者。**完整的功能介绍、截图和使用说明请看上游仓库**：[中文](https://github.com/xiufengsun/TokenTracker/blob/main/README.zh-CN.md) · [English](https://github.com/xiufengsun/TokenTracker) · [日本語](https://github.com/xiufengsun/TokenTracker/blob/main/README.ja.md) · [한국어](https://github.com/xiufengsun/TokenTracker/blob/main/README.ko.md) · [Deutsch](https://github.com/xiufengsun/TokenTracker/blob/main/README.de.md)。这里只写两件事：这个工具是什么，以及本分支多了什么。
 
-### Track every AI token — then bring your usage to life
+## 这个工具是什么
 
-An accurate, local-first token usage and cost dashboard for **48 AI coding tools** — plus a desktop pet, **4 native widgets**, and **15 achievement tracks**. No cloud account, no API keys, no setup.
+Token Tracker 是一个本地优先的 AI 用量统计工具。它读取你电脑上各个 AI 编程工具（Claude Code、Codex、Cursor、Gemini CLI 等）留下的记录，统计用了多少 token、花了多少钱，并在一个仪表盘里展示趋势和成本。
 
-[![npm version](https://img.shields.io/npm/v/tokentracker-cli.svg?color=blue)](https://www.npmjs.com/package/tokentracker-cli)
-[![npm downloads](https://img.shields.io/npm/dm/tokentracker-cli.svg?color=brightgreen)](https://www.npmjs.com/package/tokentracker-cli)
-[![Homebrew](https://img.shields.io/github/v/release/xiufengsun/TokenTracker?label=brew&color=F8B73E&logo=homebrew&logoColor=white)](https://github.com/xiufengsun/homebrew-tokentracker)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![CLI](https://img.shields.io/badge/CLI-macOS%20%C2%B7%20Linux%20%C2%B7%20Windows-lightgrey.svg)](https://www.npmjs.com/package/tokentracker-cli)
-[![macOS app](https://img.shields.io/badge/macOS%20app-menu%20bar%20%2B%20widgets-lightgrey.svg?logo=apple&logoColor=white)](https://github.com/xiufengsun/TokenTracker/releases/latest)
-[![Windows app](https://img.shields.io/badge/Windows%20app-system%20tray-lightgrey.svg?logo=windows&logoColor=white)](https://github.com/xiufengsun/TokenTracker/releases/latest)
-[![GitHub stars](https://img.shields.io/github/stars/xiufengsun/TokenTracker?style=social)](https://github.com/xiufengsun/TokenTracker/stargazers)
-[![Featured in 阮一峰周刊 #393](https://img.shields.io/badge/Featured%20in-%E9%98%AE%E4%B8%80%E5%B3%B0%E5%91%A8%E5%88%8A%20%23393-FF6B35?logo=rss&logoColor=white)](https://github.com/ruanyf/weekly/blob/master/docs/issue-393.md)
-[![Author tokens](https://srctyff5.us-east.insforge.app/functions/tokentracker-badge-svg?user_id=0652839f-d19f-4f67-af85-6b7675875443&metric=tokens&compact=1&label=author%20tokens)](https://github.com/xiufengsun/TokenTracker)
+- **本地运行。** 解析和统计都在你自己的电脑上完成，不需要云账号和 API Key。
+- **只读用量。** 只记录 token 数量、时间和模型名，不读取对话内容。
+- **多种形态。** 命令行工具（npm 包）、网页仪表盘，以及 Windows、macOS、Linux 的桌面程序。
 
-<br/>
+## 本分支多了什么
 
-<strong>📊 See the token dashboard in action</strong>
+官方云服务推出付费订阅之后，想用云同步但不付费的用户会被引向“自己部署”；但客户端一直只认官方云，想换后端只能靠环境变量，设置里没有入口。本分支就是为了补上这条路，缘由见上游 issue [#1119](https://github.com/xiufengsun/TokenTracker/issues/1119)。
 
-<br/><br/>
+| 新增 | 说明 |
+| --- | --- |
+| **在设置里切换云端后端** | 「设置 → 云服务」里新增服务器卡片，可以在官方云和自部署实例之间切换（填地址和 anon key），也可以随时恢复官方云。 |
+| **保存前测试连接** | 由本地服务探测目标地址是否可达，并区分证书错误和地址错误。 |
+| **切换前确认** | 切换服务器会退出登录，所以先弹窗说明；表单里附了部署指南的链接。 |
+| **显示当前服务器状态** | 打开设置时自动检查，显示「已连接」或「服务器不可达」；地址没写协议时自动补上 `https://`。 |
+| **更新渠道可选**（仅 Windows） | 在设置里选择跟随本分支还是官方版本的发布，见下文。 |
+| **「关于」页面** | 「设置 → 应用 → 关于」：项目介绍、版本、许可证和贡献者。 |
+| **服务端部署指南** | 新增 [`server/README.md`](server/README.md)：怎样部署自己的云端，客户端怎样连上去。 |
 
-<video src="https://github.com/user-attachments/assets/3275979d-bbed-4639-83e2-8b7d83bed6af" controls muted playsinline poster="https://raw.githubusercontent.com/xiufengsun/tokentracker/main/docs/screenshots/dashboard-light.png" width="820"></video>
+前四项和「关于」页面已经作为 PR 提交给上游（[#1082](https://github.com/xiufengsun/TokenTracker/pull/1082)、[#1084](https://github.com/xiufengsun/TokenTracker/pull/1084)、[#1085](https://github.com/xiufengsun/TokenTracker/pull/1085)、[#1086](https://github.com/xiufengsun/TokenTracker/pull/1086)、[#1081](https://github.com/xiufengsun/TokenTracker/pull/1081)），通过了测试并按评审意见返工过；截至 2026-11-27 还没有合并，是否已合并请以上游页面为准。
 
-<br/><br/>
+## 下载
 
-<table>
-<tr>
-<td width="58%"><img src="docs/screenshots/pet.png" alt="TokenTracker desktop pet powered by real AI coding activity" /></td>
-<td width="42%"><img src="docs/screenshots/widgets-overview.png" alt="TokenTracker desktop widgets for usage, heatmap, models, and limits" /></td>
-</tr>
-<tr>
-<td><strong>🐾 A living desktop companion</strong><br/>Codes, celebrates streaks, follows your cursor, and rests when you do.</td>
-<td><strong>🧩 Four native widgets</strong><br/>Usage, activity heatmap, top models, and rate limits at a glance.</td>
-</tr>
-</table>
+| 平台 | 怎么获取 |
+| --- | --- |
+| Windows | 到 [Releases](https://github.com/LceAn/TokenTracker/releases) 下载 `TokenTracker-Setup.exe`，不需要管理员权限。 |
+| macOS、Linux | 暂无安装包。从源码构建的方法与上游相同，见 [CONTRIBUTING.md](CONTRIBUTING.md)。 |
 
-<p>
-  <img src="dashboard/public/achievements/token-titan.png" alt="Token Titan achievement" width="64" />
-  <img src="dashboard/public/achievements/streak.png" alt="Streak achievement" width="64" />
-  <img src="dashboard/public/achievements/multitool.png" alt="Multitool achievement" width="64" />
-  <img src="dashboard/public/achievements/night-owl.png" alt="Night Owl achievement" width="64" />
-  <img src="dashboard/public/achievements/project-devotion.png" alt="Project Devotion achievement" width="64" />
-</p>
+通过 npm、Homebrew 安装的是官方版本，不包含上面的改动。
 
-<strong>🏆 Unlock achievements from the way you actually code.</strong>
+### 更新渠道（仅 Windows）
 
-<br/><br/>
+Windows 版可以在「设置 → App 与更新 → 更新渠道」里选择：
 
-<strong>🎬 Meet TokenTracker</strong>
+- **社区分支**（默认）：跟随本分支的发布。
+- **官方版本**：跟随上游的发布。下一次更新会把本分支替换成官方版本，上表的功能会被移除。安装前一定会让你确认，不会在后台自己换掉。
 
-<br/><br/>
+换成官方版本之后，官方客户端里没有这个选项；想换回来需要重新安装本分支的安装包。macOS 和 Linux 版没有这个选项，只跟随官方发布。
 
-<video src="https://github.com/user-attachments/assets/efb89086-b7d7-4cb6-ae3c-3a6cb50188d2" controls muted playsinline poster="https://raw.githubusercontent.com/xiufengsun/tokentracker/main/docs/screenshots/intro-film-poster.png" width="820">
-  <img src="https://raw.githubusercontent.com/xiufengsun/tokentracker/main/docs/screenshots/intro-film-poster.png" alt="TokenTracker intro film" width="820" />
-</video>
+## 仓库结构
 
-<br/><br/>
-
-⭐ **If TokenTracker saves you time, please [star it on GitHub](https://github.com/xiufengsun/TokenTracker) — it helps other developers find it.**
-
-<br/>
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/M4M11XSNWD)
-
-</div>
-
----
-
-This project is tested with BrowserStack.
-
----
-
-## ⚡ Quick Start
-
-> **Requirements**: Node.js **20+** (CLI runs on macOS / Linux / Windows; native desktop app ships for macOS (menu bar), Windows (system tray) and Linux (AppImage, tray). Cursor token reading uses the system `sqlite3` CLI when available and falls back to `node:sqlite` on supported Node releases).
-
-```bash
-npx tokentracker-cli
+```
+desktop/   桌面程序：本地采集、本地服务、界面，以及 Windows / macOS / Linux 的宿主程序
+server/    服务端：可以自己部署的云端（安装器、数据库结构、Cloudflare Worker）
 ```
 
-That's it. First run installs hooks, syncs your data, and opens the dashboard at `http://localhost:7680`.
+想在设置里选「自部署实例」，需要先有一个自己的服务端。部署方法见 [server/README.md](server/README.md)。
 
-**What you get in 30 seconds:**
-- 📊 A local dashboard at `localhost:7680` with usage trends, model breakdown, cost analysis
-- 🔌 Auto-detected hooks for every supported AI tool you have installed
-- 🏠 Local-first — parses logs on your machine; no account or API keys required
-- 🧩 *Optional:* a Skills tab that browses 250+ public skills and syncs them across Claude · Codex · Grok · Antigravity · Gemini · OpenCode · Hermes
+## 怎么维护
 
-> **Want a native desktop app?**
-> - **macOS** — [Download `TokenTrackerBar.dmg`](https://github.com/xiufengsun/TokenTracker/releases/latest/download/TokenTrackerBar.dmg) → drag to Applications. Menu bar status icon, desktop widgets, and the dashboard in a WKWebView.
-> - **Windows** — [Download `TokenTracker-Setup.exe`](https://github.com/xiufengsun/TokenTracker/releases/latest/download/TokenTracker-Setup.exe) → run the per-user installer (no admin needed). System-tray app with the dashboard in WebView2. Portable zip also on the [releases page](https://github.com/xiufengsun/TokenTracker/releases/latest).
-> - **Linux** — [Download `TokenTracker-linux-x86_64.AppImage`](https://github.com/xiufengsun/TokenTracker/releases/latest/download/TokenTracker-linux-x86_64.AppImage) → `chmod +x` and run. Tray app with the dashboard in a WebKitGTK window. It carries its own GTK/WebKit, so it needs nothing from your distro beyond a current glibc; on GNOME the tray icon still needs the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/). `.deb` and `.rpm` packages are also on the [releases page](https://github.com/xiufengsun/TokenTracker/releases/latest) — those link the distro's `webkit2gtk-4.1`, `gtk3` and appindicator instead, so the `.deb` will not install on Debian 12 (use the AppImage there).
+- **以上游为基线。** `main` 分支 = 上游 `main` + 上表的改动。
+- **每周同步一次上游。** 每次同步是一条合并提交，标题形如 `chore(fork): sync upstream vX.Y.Z`，看提交记录就知道包含到上游的哪个版本。
+- **改动保持能提回上游的形态。** 上游合并了对应的 PR 之后，下一次同步时它就成为上游代码的一部分，本分支不再单独维护。
 
-Install globally for shorter commands:
+具体步骤见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-```bash
-npm i -g tokentracker-cli
+## 反馈
 
-tokentracker              # Open the dashboard
-tokentracker sync         # Manual sync
-tokentracker status       # Check hook status
-tokentracker status --json     # Machine-readable summary (pipe to jq, ingest from AI agents)
-tokentracker status --light    # Plain ASCII table (CI / SSH, no spinner)
-tokentracker doctor       # Health check
-```
+本分支为什么存在、现在能做什么、接下来做什么，见仓库 Issues 里的置顶公告。
 
-### 🍺 Homebrew (macOS)
+使用问题、部署问题和改进建议，欢迎在本仓库提 [Issue](https://github.com/LceAn/TokenTracker/issues)。请不要在 issue 里贴 token、密钥或 anon key。
 
-Prefer `brew`? Install directly — no extra tap step needed:
+## 许可
 
-```bash
-# macOS menu bar app (DMG)
-brew install --cask xiufengsun/tokentracker/tokentracker
+MIT License。上游的版权声明完整保留在 [LICENSE](LICENSE)，本分支新增的内容同样以 MIT 协议发布。
 
-# CLI only
-brew install xiufengsun/tokentracker/tokentracker
-```
-
-Upgrade with `brew upgrade --cask xiufengsun/tokentracker/tokentracker`. The tap auto-bumps within an hour of every new release.
-
-### 🐧 Linux (AppImage, `.deb`, `.rpm`)
-
-Every release ships all three. One self-contained file, no package manager:
-
-```bash
-chmod +x TokenTracker-linux-x86_64.AppImage
-./TokenTracker-linux-x86_64.AppImage
-```
-
-Or install through your package manager:
-
-```bash
-sudo apt install ./TokenTracker-linux-x86_64.deb    # Debian / Ubuntu
-sudo dnf install ./TokenTracker-linux-x86_64.rpm    # Fedora / RHEL
-```
-
-> **Debian 12:** the `.deb` depends on `libappindicator3-1`, which bookworm dropped in favour of `libayatana-appindicator3-1`, so `apt` refuses it. Use the AppImage.
-
-All three bundle their own Node runtime and the dashboard. The AppImage additionally carries GTK3, WebKitGTK and appindicator, which is why it is ~120MB and installs nowhere; the `.deb` and `.rpm` link the distro's `webkit2gtk-4.1`, `gtk3` and appindicator instead, at ~55MB. Tested on Arch + KDE Plasma; on GNOME the tray icon requires the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/), and clicking the tray icon opens the menu rather than the window (a libayatana-appindicator limitation).
-
-An Arch `PKGBUILD` for a local pacman install lives in `TokenTrackerLinux/packaging/arch/tokentracker-linux` — see [`TokenTrackerLinux/README.md`](TokenTrackerLinux/README.md). It is not published to the AUR.
-
----
-
-
-## ✨ Features
-
-- 🔌 **48 AI tools out of the box** — Claude Code, Codex CLI, AStudio, Cursor, Gemini CLI, Antigravity, Kiro, OpenCode, OpenSquilla, OpenClaw, Every Code, Hermes Agent, GitHub Copilot, Kimi Code, CodeBuddy, WorkBuddy, WorkBuddy AI, Grok Build, oh-my-pi, OmO, pi, Dots, Prime Agent, Craft Agents, Reasonix, Muse Code, Kilo CLI, Kilo Code, Roo Code, Zed Agent, Goose, Droid, Mimo Code, DuMate, ZCode, Qoder, AnythingLLM Desktop, Claude Science, DeepSeek Harness, TRAE Work CN, LM Studio, Unsloth Studio, Devin CLI, Cline, MiniMax Code, Command Code, DeepAI Code, TRAE
-- 🏠 **Local-first** — Runs on your machine. Parses logs locally with no account or API keys needed.
-- 🚀 **Zero config** — Hooks auto-install on first run. From zero to dashboard in 30 seconds.
-- 📊 **Beautiful dashboard** — Usage trends, cost breakdowns by model, GitHub-style activity heatmap, project attribution
-- 🖥️ **Native desktop app** — macOS menu bar (+ widgets) and Windows system tray, each with an embedded server and the dashboard in a native webview
-- 🐾 **Desktop pet** — A pixel companion powered by real coding activity: it works when you work, celebrates streaks, and sleeps when you rest
-- 🎨 **4 desktop widgets** — Pin Usage / Activity Heatmap / Top Models / Usage Limits to your desktop
-- 🏆 **15 achievement tracks** — Turn daily usage, streaks, tools, models, and milestones into collectible badges worth sharing
-- 📈 **Real-time usage limits** — Claude / Codex / Cursor / Gemini / Kimi / Kiro / Grok / Copilot / Antigravity / ZCode / OpenCode Go / Qoder / Qoder CN / Command Code / Ark Coding Plan / Ark Agent Plan / Devin quota windows, with last-good caching when a local provider app is temporarily closed
-- 🟢 **Service Status page** — live operational and incident status from 8 official provider status pages
-- 💰 **Cost engine** — 2,200+ models priced via [LiteLLM](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json) (auto-refreshed daily) + curated overrides for niche tools (Kiro, Cursor Composer, Kimi, CodeBuddy hy3); 24h disk cache + bundled offline snapshot mean accurate USD without an internet connection. Models without published vendor pricing (e.g. Tencent hy3-preview) are tracked by tokens but show $0 cost until the vendor publishes a rate.
-- 🌐 **Optional leaderboard** — Compare with developers worldwide; drag-to-reorder columns to focus on the providers you care about (opt-in, sign in to participate)
-- 🔄 **Cross-device account view** — Optional cloud sync merges usage across your machines (laptop, desktop, server) into one view. Off by default; local tracking stays independent.
-- 🧩 **Optional Skills tab** — browse 250+ public skills from `anthropics/skills`, `ComposioHQ/awesome-claude-skills`, `skills.sh` and any GitHub repo you add; sync them across Claude / Codex / Grok / Antigravity / Gemini / OpenCode / Hermes with named targets and one-click Undo
-- 🔒 **Privacy-first** — Local usage metrics only (token counts, timestamps, and model names). Prompts, completions, and code never leave your machine.
-
----
-
-## 🖼️ Showcase
-
-<table>
-<tr>
-<td width="50%">
-
-**Dashboard** — usage trends, model breakdown, cost analysis
-
-<img src="https://raw.githubusercontent.com/xiufengsun/tokentracker/main/docs/screenshots/dashboard-light.png" alt="Dashboard" />
-
-</td>
-<td width="50%">
-
-**Desktop Widgets** — pin usage to your desktop
-
-<img src="https://raw.githubusercontent.com/xiufengsun/tokentracker/main/docs/screenshots/widgets-overview.png" alt="Desktop Widgets" />
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**Menu Bar App** — animated Clawd companion + native panels
-
-<img src="https://raw.githubusercontent.com/xiufengsun/tokentracker/main/docs/screenshots/menubar.gif" alt="Menu Bar App" />
-
-</td>
-<td width="50%">
-
-**Global Leaderboard** — compare with developers worldwide
-
-<img src="https://raw.githubusercontent.com/xiufengsun/tokentracker/main/docs/screenshots/leaderboard.png" alt="Leaderboard" />
-
-</td>
-</tr>
-<tr>
-<td colspan="2">
-
-**Skills Manager** — browse 250+ public skills from GitHub & `skills.sh`, install once, sync to Claude / Codex / AStudio / Grok / Antigravity / Gemini / OpenCode / Hermes. Per-target toggles, one-click Undo, no manual file copying.
-
-<img src="https://raw.githubusercontent.com/xiufengsun/tokentracker/main/docs/screenshots/skills.png" alt="Skills Manager" />
-
-</td>
-</tr>
-<tr>
-<td colspan="2">
-
-**Desktop Pet** — a pixel companion that floats on your desktop and reacts to your real token burn: it codes when you code, celebrates streaks, and sleeps when you rest. Import community pets from [codex-pets.net](https://codex-pets.net) with a link or a `.codex-pet.zip` — V2 pets even turn their head to follow your cursor in 16 directions. macOS, Windows, and web.
-
-<img src="https://raw.githubusercontent.com/xiufengsun/tokentracker/main/docs/screenshots/pet.png" alt="Desktop Pet" />
-
-</td>
-</tr>
-<tr>
-<td colspan="2">
-
-**Achievements** — 15 tracks turn usage milestones, streaks, tools, and models into collectible badges — with progress visible before each unlock.
-
-<img src="https://raw.githubusercontent.com/xiufengsun/tokentracker/main/docs/screenshots/achievements.png" alt="TokenTracker Achievements" />
-
-</td>
-</tr>
-</table>
-
----
-
-## 🔌 Supported AI Tools
-
-| Tool | Detection | Method |
-|---|---|---|
-| **Claude Code** | ✅ Auto | SessionEnd hook in `settings.json` |
-| **Codex CLI** | ✅ Auto | TOML notify hook in `config.toml` |
-| **AStudio** | ✅ Auto | TOML notify hook in `config.toml` |
-| **Cursor** | ✅ Auto | API + SQLite auth token |
-| **Kiro** | ✅ Auto | SQLite + JSONL hybrid |
-| **Gemini CLI** | ✅ Auto | SessionEnd hook |
-| **OpenCode** | ✅ Auto | Plugin system + SQLite |
-| **OpenSquilla** | ✅ Auto | Passive SQLite reader for finalized model usage from Desktop (`%APPDATA%\@opensquilla\desktop-electron\opensquilla\state\sessions.db`) or CLI (`~/.opensquilla/state/sessions.db`); reads timestamps, model IDs, and token counters only. Override with `TOKENTRACKER_OPENSQUILLA_DB` |
-| **OpenClaw** | ✅ Auto | Session plugin |
-| **Every Code** | ✅ Auto | TOML notify hook |
-| **Hermes Agent** | ✅ Auto | SQLite sessions table (`~/.hermes/state.db`) |
-| **GitHub Copilot App / CLI** | ✅ Auto | Unified per-request SQLite usage (`~/.copilot/session-store.db`); App DB legacy baseline |
-| **GitHub Copilot Chat extension / legacy CLI** | ✅ Auto | OpenTelemetry file exporter (`COPILOT_OTEL_FILE_EXPORTER_PATH`) |
-| **Kimi Code** | ✅ Auto | Passive `wire.jsonl` reader (`~/.kimi/sessions/**/wire.jsonl`) |
-| **oh-my-pi (Pi Coding Agent)** | ✅ Auto | Passive reader (`~/.omp/agent/sessions/**/*.jsonl`) + managed notify extension written by `tokentracker init` to `~/.omp/agent/extensions/tokentracker-notify.ts` for near-real-time sync (skipped if a same-named unmanaged file already exists; removed by `tokentracker uninstall` when still managed) |
-| **CodeBuddy** (Tencent) | ✅ Auto | SessionEnd hook in `~/.codebuddy/settings.json` (Claude-Code fork) |
-| **WorkBuddy** (Tencent) | ✅ Auto | SessionEnd hook in `~/.workbuddy/settings.json` (Claude-Code fork) + passive `projects/**/*.jsonl` scan |
-| **WorkBuddy AI** | ✅ Auto | International build: hooks and passive usage under `~/.workbuddy-ai`; override with `WORKBUDDY_AI_HOME` |
-| **Grok Build** (xAI) | ✅ Auto | SessionEnd hook + passive `updates.jsonl` / `signals.json` scan (`~/.grok/sessions/**/`) |
-| **Kilo CLI** (kilo.ai) | ✅ Auto | Passive SQLite reader (`~/.local/share/kilo/kilo.db`, OpenCode-fork schema) |
-| **Kilo Code** (VS Code extension) | ✅ Auto | Passive `ui_messages.json` reader (Cursor/Code/CodeBuddy/Windsurf globalStorage) |
-| **Antigravity** | ✅ Auto | Passive transcript reader (`~/.gemini/{antigravity,antigravity-ide,antigravity-insiders,antigravity-cli}/brain/**/transcript.jsonl`, plus T3 Code profiles at `~/.t3/userdata/providers/antigravity/*/antigravity-acp/`); see [quota credentials and Linux keyring setup](docs/antigravity-limits.md). Disable quota lookup with `TOKENTRACKER_DISABLE_ANTIGRAVITY_QUOTA=1` |
-| **OmO** | ✅ Auto | Passive reader (`~/.omo/agent/sessions/**/*.jsonl`, subagent transcripts included). Same session format as oh-my-pi but a separate install root, cursor namespace and source label, so both can be tracked side by side. Reasoning tokens are reported as a subset of output (Codex convention) and are never billed twice |
-| **pi** (`@mariozechner/pi-coding-agent`) | ✅ Auto | Passive reader (`~/.pi/agent/sessions/**/*.jsonl`, pi-subagents fork transcripts folded in) + Sessions browser (`pi --session <id>` resume) |
-| **Dots** | ✅ Auto | Routed through pi's provider split (`pi-dots` source, same passive reader) — no separate hook |
-| **Prime Agent** | ✅ Auto | Metadata-only passive usage reader (`~/.prime/agent/sessions/*.jsonl`; reads usage/model/provider/timestamp, never prompts or responses) |
-| **Craft Agents** | ✅ Auto | Passive session reader (`~/.craft-agent` + workspace session logs) |
-| **Reasonix** | ✅ Auto | Passive telemetry reader (`~/.reasonix/**/*.jsonl.telemetry.json`) |
-| **Muse Code** | ✅ Auto | Passive session reader (`~/.local/share/muse/sessions/**/session.jsonl`; override with `TOKENTRACKER_MUSE_HOME`) |
-| **Roo Code** (VS Code extension) | ✅ Auto | Passive `ui_messages.json` reader (`rooveterinaryinc.roo-cline`) |
-| **Zed Agent** | ✅ Auto | Passive SQLite reader (`threads.db`, all providers — hosted `zed.dev` + bring-your-own) |
-| **Goose** (Block) | ✅ Auto | Passive SQLite reader (`sessions.db`, cumulative deltas) |
-| **Droid** (Factory) | ✅ Auto | Passive session reader (`~/.factory/sessions/**/settings.json`, cumulative deltas) |
-| **Mimo Code** (mimocode) | ✅ Auto | Passive SQLite reader (`~/.local/share/mimocode/mimocode.db`, OpenCode-fork schema; counts only mimo-native turns — mirrored Claude/claude-mem history is excluded) |
-| **DuMate** (Baidu) | Auto | Passive OpenCode SQLite reader (`%APPDATA%/qianfan-desktop-app/qianfan_desk_xdg/*/data/opencode/opencode.db`); independent `dumate` source with reinstall-copy deduplication. Override with `TOKENTRACKER_DUMATE_HOME`. See [DuMate collection](docs/dumate.md) |
-| **ZCode** (Z.ai) | ✅ Auto | Passive SQLite reader (`~/.zcode/cli/db/db.sqlite`, OpenCode-fork schema; counts only Z.ai/BigModel GLM turns — bundled Claude/Codex/Gemini sub-agents are excluded) |
-| **Qoder** | ✅ Auto | Passive SQLite reader (`Qoder/SharedClientCache/cache/db/local.db`; reads assistant `token_info`, separates cached input, and never reads prompt or response text), plus Plan Credits and Ultimate Free Calls limits from Qoder's local session. Qoder Desktop 0.4.x limits fall back to scanning the tails of its local `main.log`/`renderer.log` files for the account-usage summary (see [Qoder desktop limits](docs/qoder-desktop-limits.md)). Qoder CN (国内版, `QoderCN/SharedClientCache/cache/db/local.db`) is tracked as its own source with quota from `qoder.com.cn`. |
-| **LM Studio** | ✅ Auto | Passive recursive reader for `~/.lmstudio/server-logs/**/*.log`; reads only final-response IDs, models, timestamps, and scalar `usage` counters from Chat Completions and Responses API records. Mirrored response IDs are deduplicated; prompt and response bodies are never retained. These developer-server records cover local inference and LM Link at zero marginal API cost, not Bionic Secure Cloud billing. |
-| **Unsloth Studio** | ✅ Auto | Passive SQLite reader for `$UNSLOTH_STUDIO_HOME/studio.db` (default `~/.unsloth/studio/studio.db`). Reads scalar `contextUsage` metadata and content-free `api_usage_events` only; prompts, replies, attachments, API subjects, credentials, and training metrics are excluded. Local routes stay zero-cost, while known paid provider routes use the model that actually answered for estimated token cost. |
-| **AnythingLLM Desktop** | ✅ Auto | Passive SQLite reader (`anythingllm-desktop/storage/anythingllm.db`; reads per-message token metrics only, never prompts or responses) |
-| **Devin CLI** (Cognition) | ✅ Auto | Passive SQLite reader (`$XDG_DATA_HOME/devin/cli/sessions.db`, default `~/.local/share/devin/cli/sessions.db`; reads per-request usage metrics deduplicated by `request_id` — replay/fork/compaction copies never double-count — using the recorded generation model, never prompts, responses, or `cogs_json`). Devin models (`swe-2`, `swe-2-high`, `compactor`) currently have no pricing data, so their token counts are reported but excluded from dollar estimates — a $0 figure does not mean free usage. No native Windows data dir is known; a WSL install is read via `\\wsl$`. |
-| **Cline** (CLI v3 / desktop app) | ✅ Auto | Passive reader (`~/.cline/data/sessions/<id>/*.messages.json`). Per-turn `metrics` are usage deltas where `inputTokens` already includes cache read+write and `outputTokens` already includes reasoning, so the cached prefix is subtracted and reasoning is never billed twice; Cline's own per-call `cost` is trusted when reported. `cline-free/*` and `cline-pass/*` gateway models are priced at $0. The VS Code extension's globalStorage layout is not read. Path overrides: `TOKENTRACKER_CLINE_SESSIONS_DIR`, `TOKENTRACKER_CLINE_DATA_DIR`, `TOKENTRACKER_CLINE_HOME`, `CLINE_SESSION_DATA_DIR`, `CLINE_DATA_DIR`, or `CLINE_DIR` |
-| **MiniMax Code** | ✅ Auto | Passive reader (`~/.minimax/v2/sessions/YYYY/MM/DD/<session>/messages.jsonl`). Dedupes on `message_id`, records the routed upstream model per message, and ignores the always-zero `usage.cost` in favor of normal pricing. Override the directory with `TOKENTRACKER_MINIMAX_HOME` |
-| **Command Code** | ✅ Auto | Passive session reader (`~/.commandcode/projects/<cwd-slug>/<session-id>.jsonl`; `*.checkpoints.jsonl` snapshots and `.prompts.` sidecars are skipped). Scans transcripts locally and extracts selected usage metadata, including token counts and the CLI's `costUsd` display estimate. Token Tracker estimates cost with its shared model price table instead. Subtracts both cache reads and writes from cache-inclusive input to avoid double counting. Token Tracker does not persist or upload prompt, reply or code bodies. Override the directory with `TOKENTRACKER_COMMANDCODE_HOME` |
-| **DeepAI Code** | ✅ Auto | Passive reader for the pi-format sessions DeepAI Code embeds (`~/.deepai-code/userdata/deepai/pi/*/sessions/**/*.jsonl`). Uses the pi usage contract (cached input reported separately, `usage.reasoning` is a subset of output and never added twice) with its own isolated `deepai` cursor namespace (separate from `pi`'s cursor state). DeepAI bills through its plan and the app always reports `usage.cost.total = 0`, so the cost block is ignored and normal model pricing applies. Reads token counters, model ids and timestamps only. Override the root with `TOKENTRACKER_DEEPAI_CODE_USERDATA` or `TOKENTRACKER_DEEPAI_CODE_AGENT_DIR` |
-| **Claude Science** | ✅ Auto | Passive SQLite reader (`~/.claude-science/operon-cli.db`; reads the `frames` table's token counters only, never prompts, artifacts or research content). No native Windows build — on Windows the app runs inside WSL and is read from there. |
-| **DeepSeek Harness** | ✅ Auto | Passive session reader (`~/.dsh/sessions/**/session[.vN].jsonl[.zstd]`; parses session header and assistant events, handles multi-frame zstd decompression). Also feeds the Sessions browser with one row per session: subagent sessions nest under their parent, a seeded fork is reported as a branch, and replayed messages are attributed to the log that created them so a fork never bills its parent's tokens twice in the Sessions browser |
-| **TRAE (international)** | ✅ Auto | Local TRAE / TRAE SOLO SQLCipher usage metadata with the shared application key by default; optional `TOKENTRACKER_TRAE_SQLCIPHER_KEY` override. No vendor API calls. See [setup and limitations](docs/trae.md). |
-| **TRAE Work CN** | ✅ Auto | **Requires an explicit opt-in: set `TOKENTRACKER_TRAE_CN_USAGE=1`.** Reading usage transmits the locally stored sign-in authorization to TRAE's internal API, so nothing is sent until you turn it on. Once opted in: during eligible non-background sync when local TRAE Work CN auth exists, reads session-token usage from the locally signed-in macOS / Windows app; its internal API may change |
-
-> **Do I need to install any plugin or hook manually?** No. `tokentracker` (or `tokentracker init`) handles everything on first run:
-> - **Hook-based** tools (Claude Code, Codex, AStudio, Gemini, Every Code, **CodeBuddy**, **WorkBuddy**, **Grok Build**) — we write a SessionEnd hook or TOML notify entry into the tool's own config.
-> - **Plugin-based** tools (OpenCode, **OpenClaw**) — plugins ship inside the npm package. OpenClaw's session plugin lives at `~/.tokentracker/tracker/openclaw-plugin/openclaw-session-sync/`; we link and enable it via OpenClaw's own CLI, then set `hooks.allowConversationAccess=true` so OpenClaw permits the session-finished event that triggers sync. No download, no drag-and-drop.
-> - **oh-my-pi** — passive session scan is always the billing/token source of truth (`~/.omp/agent/sessions/**/*.jsonl`). When OMP is detected, `tokentracker init` also writes a managed notify extension to `~/.omp/agent/extensions/tokentracker-notify.ts` so turns can trigger near-real-time sync. That file is owned only when it carries TokenTracker's managed marker: a same-named user-authored extension is never overwritten or deleted. `tokentracker uninstall` removes the extension only while it is still managed.
-> - **OmO** — passive session scan only (`~/.omo/agent/sessions/**/*.jsonl`, including nested subagent transcripts). No plugin or hook is installed. Path overrides, in precedence order: `TOKENTRACKER_OMO_AGENT_DIR`, then `TOKENTRACKER_OMO_HOME` / `OMO_HOME` (appended with `/agent`). `PI_CONFIG_DIR` and `PI_CODING_AGENT_DIR` are not honored: those belong to pi/omp.
-> - **Cline** — passive session scan only (`~/.cline/data/sessions/<id>/*.messages.json`, Cline CLI v3 / desktop app; the VS Code extension's globalStorage is a separate, older install and is not read). No hook is installed. Per-turn `metrics` are usage deltas where `inputTokens` already contains cache read+write, so only the non-cached remainder is billed. Path overrides, in precedence order: `TOKENTRACKER_CLINE_SESSIONS_DIR`, `TOKENTRACKER_CLINE_DATA_DIR`, `TOKENTRACKER_CLINE_HOME`, then Cline's own `CLINE_SESSION_DATA_DIR`, `CLINE_DATA_DIR`, `CLINE_DIR`.
-> - **Passive readers** (Cursor, Kiro, Hermes, Kimi Code, Copilot, **Grok Build**, **OmO**, **pi**, **Craft Agents**, **Reasonix**, **Muse Code**, **Kilo CLI**, **Kilo Code**, **Roo Code**, **Antigravity**, **Zed Agent**, **Goose**, **Droid**, **Mimo Code**, **DuMate**, **ZCode**, **Qoder**, **LM Studio**, **Unsloth Studio**, **OpenSquilla**, **AnythingLLM Desktop**, **Devin CLI**, **MiniMax Code**, **DeepAI Code**, **Claude Science**, **DeepSeek Harness**, **Cline**) — nothing is installed into those tools. We only read files they already produce (SQLite DB, JSONL, OTEL export, session logs). Copilot App / CLI usage is read per request from `~/.copilot/session-store.db`; `data.db` provides the one-time legacy adoption baseline and stays observe-only after the store becomes canonical, while the Chat extension and legacy CLI continue using OTEL. TokenTracker coordinates the sources so overlapping requests are counted once. Mixed App/CLI usage that predates adoption is retained as a `github-copilot-legacy` aggregate rather than assigned to a guessed request model.
-> - **Grok Build estimate** — current local telemetry exposes cumulative `updates.jsonl` `totalTokens`, but not a stable prompt/output/cache split; `signals.json` remains a fallback with `contextTokensUsed` snapshots. TokenTracker estimates Grok cost until per-call usage details are available.
-> - **Grok product shares** — the Grok limits card shows the shared weekly or monthly pool as one bar. The headline follows the Used / Remaining display setting, the same as every other provider. Expand the card (click it in the macOS menu bar) to see each product's share (Grok Build, Chat, Voice, Imagine, and any other product the billing API reports). Those percentages are portions of the amount used, not separate quotas, so in Remaining mode they do not add up to the headline. The stacked bar itself is shown in Used mode.
->
-> Run `tokentracker status` anytime to verify every integration's state. If something shows `skipped`, the `detail` column explains why (e.g. tool CLI not on `PATH`, config unreadable).
->
-> Deeper dives: [OpenClaw integration & troubleshooting](docs/openclaw-integration.md).
-
-Missing your tool? [Open an issue](https://github.com/xiufengsun/TokenTracker/issues/new) — adding new providers is usually one parser file away.
-
----
-
-## 🆚 Why TokenTracker? <a id="ccusage-alternative"></a>
-
-> **Looking for a desktop app with widgets and a visual dashboard?** TokenTracker pairs local log parsing across AI coding tools with native desktop apps, desktop widgets, provider quota tracking, and optional cloud sync.
-
-| Capability | **[TokenTracker](https://github.com/xiufengsun/TokenTracker)** | **[ccusage](https://github.com/ccusage/ccusage)** | **[Tokscale](https://github.com/junhoyeo/tokscale)** |
-|---|:---:|:---:|:---:|
-| **AI tools supported** | **48** | Multi-agent | Multi-agent |
-| **Primary interface** | Desktop apps & web dashboard | Terminal CLI | Terminal TUI & CLI |
-| **Local analysis** | ✅ | ✅ | ✅ |
-| **Native desktop apps** | ✅ macOS, Windows, Linux | ❌ | ❌ |
-| **Desktop widgets** | ✅ 4 widgets | ❌ | ❌ |
-| **Rate-limit tracking** | ✅ 18 providers | Limited (Claude blocks) | Multiple providers |
-| **Terminal analytics** | Basic CLI (`status`, `--json`) | Strong CLI reporting | Interactive TUI & CLI |
-| **JSON export** | ✅ | ✅ | ✅ |
-| **Public leaderboard** | Optional (opt-in) | ❌ | Optional (`submit`) |
-
----
-
-## 🏗️ How It Works
-
-```mermaid
-flowchart LR
-    A["AI coding tools<br/>Claude Code · Codex · AStudio · Cursor · Gemini · Kiro<br/>OpenCode · OpenClaw · Every Code · Hermes · Copilot<br/>Kimi Code · CodeBuddy · WorkBuddy · Grok Build · Kilo CLI · Kilo Code<br/>Antigravity · oh-my-pi · OmO · pi · Dots · Craft · Roo · Zed · Goose · Droid · Mimo · DuMate · ZCode · Qoder · AnythingLLM · Claude Science · DeepSeek Harness · TRAE · TRAE Work CN · LM Studio · Unsloth Studio · Devin CLI · Cline · MiniMax Code · Command Code · DeepAI Code"]
-    A -->|hooks trigger| B[Token Tracker]
-    B -->|parse logs<br/>30-min UTC buckets| C[(Local SQLite)]
-    C --> D[Web Dashboard]
-    C --> E[Menu Bar App]
-    C --> F[Desktop Widgets]
-    C -.->|opt-in| G[(Cloud Leaderboard)]
-```
-
-1. AI CLI tools generate logs during normal use
-2. Lightweight hooks detect changes and trigger sync (Cursor uses API instead of hooks)
-3. Token counts parsed locally — prompts, responses, and code are never saved or uploaded
-4. Aggregated into 30-minute UTC buckets
-5. Dashboard, menu bar app, and widgets all read from the same local snapshot
-
----
-
-Local features remain free and open source. Optional [TokenTracker Cloud](https://www.tokentracker.cc/cloud) is the officially hosted cross-device analytics service; see the [Cloud guide](docs/cloud-guide.md) for plans, trial, and transition rules. Purchases are live at the same worldwide USD base price for recurring and fixed-term access: USD 4.99/month or USD 39.99/year before checkout tax (final amount shown by Waffo). Self-hosted software is free with infrastructure and maintenance handled by its owner; the complete installation is currently a [technical preview](docs/self-hosting.md).
-
-## 🛡️ Privacy
-
-> 📄 **[Full Privacy Policy](docs/PRIVACY.md)** — every network request the app can make, what each one sends, and how to switch it off.
-
-TokenTracker processes your usage data locally. It never collects or uploads prompts, code, or model responses.
-
-| Protection | Description |
-|---|---|
-| **No code or prompt collection** | TokenTracker parses local log files for token counts and timestamps. Prompts, completions, code, and conversation bodies are never saved or uploaded. |
-| **Local-first by default** | Usage tracking runs entirely on your machine. No account, login, or API keys required. Cloud sync and the public leaderboard are strictly opt-in. |
-| **Auditable** | Open source. Check [`src/lib/rollout.js`](src/lib/rollout.js) — only numbers, timestamps, and model names are extracted. |
-| **Transparent network activity** | Fully documented in the [Privacy Policy](docs/PRIVACY.md). Default requests are limited to direct provider quota checks (using credentials already on your machine), GitHub star counts, update checks, pricing data refreshes (`raw.githubusercontent.com`), and anonymous telemetry (daily heartbeat + PostHog pageviews, plus optional Sentry error reports when a DSN is configured — all disabled with `TOKENTRACKER_NO_TELEMETRY=1` or `DO_NOT_TRACK=1`). Telemetry never includes tokens, models, prompts, or code. |
-
----
-
-## 📦 Configuration
-
-Most users never need this — defaults are sensible. For advanced setups:
-
-| Variable | Description | Default |
-|---|---|---|
-| `TOKENTRACKER_DEBUG` | Enable debug output (`1` to enable) | — |
-| `TOKENTRACKER_NO_TELEMETRY` | Disable all anonymous telemetry — daily heartbeat and dashboard analytics (`1` to disable; the `DO_NOT_TRACK` standard is also respected) | — |
-| `TOKENTRACKER_HTTP_TIMEOUT_MS` | HTTP timeout in milliseconds | `20000` |
-| `TOKENTRACKER_DISABLE_GIT_ATTRIBUTION` | Skip Git commit attribution (`1` to disable). Attribution runs `git log` inside the working directory of each recent session. Disabling keeps TokenTracker out of your project directories entirely — the Outcomes view then shows only manually recorded outcomes | — |
-| `TOKENTRACKER_GIT_ATTRIBUTION_PROTECTED_DIRS` | Let Git attribution enter macOS TCC-protected locations (`1` to allow). By default sessions under `~/Documents`, `~/Downloads`, `~/Desktop`, `~/Library`, the media folders and `/Volumes` are skipped, because macOS raises a separate folder-access prompt for each one. Enable this only if you keep repositories there and don't mind granting access | — |
-| `TOKENTRACKER_WSL_MODE` | WSL install resolution behavior on Windows (for aggregating native and WSL installations). `wsl-first` (prefer WSL), `native-first`, `wsl-only`, `native-only`, `both` (aggregate both installs) | `wsl-first` |
-| `CODEX_HOME` | Override Codex CLI directory | `~/.codex` |
-| `TOKENTRACKER_ACODE_HOME` | Override AStudio directory | `~/.acode` |
-| `GEMINI_HOME` | Override Gemini CLI directory | `~/.gemini` |
-| `TOKENTRACKER_GROK_HOME` | Override Grok Build directory for the Grok integration and Skills Manager | `~/.grok` |
-| `GROK_HOME` | Legacy Grok Build directory override, used when `TOKENTRACKER_GROK_HOME` is unset | `~/.grok` |
-| `TOKENTRACKER_ANTIGRAVITY_HOME` | Force a single Antigravity Skills directory (auto-detects `~/.gemini/antigravity` + `~/.gemini/antigravity-ide` otherwise) | auto |
-| `TOKENTRACKER_T3_HOME` | Override the T3 Code state directory used to auto-discover Antigravity (`agy`) profiles | `~/.t3` |
-| `TOKENTRACKER_DISABLE_ANTIGRAVITY_QUOTA` | Set to `1` to skip all Antigravity credential reads and remote quota lookups | unset |
-| `TOKENTRACKER_LMSTUDIO_HOME` | Override the LM Studio data directory used by the passive server-log reader | `~/.lmstudio` |
-| `TOKENTRACKER_UNSLOTH_DB` | Override the Unsloth Studio database file used by the passive usage reader | `$UNSLOTH_STUDIO_HOME/studio.db` |
-| `TOKENTRACKER_OPENSQUILLA_DB` | Override the OpenSquilla sessions database used by the passive usage reader | Desktop or CLI profile `state/sessions.db` |
-| `TOKENTRACKER_DEVIN_DB` | Override the Devin CLI database file used by the passive usage reader | `$XDG_DATA_HOME/devin/cli/sessions.db` |
-| `TOKENTRACKER_MINIMAX_HOME` | Override the MiniMax Code data directory used by the passive usage reader | `~/.minimax` |
-| `TOKENTRACKER_COMMANDCODE_HOME` | Override the Command Code (`cmd`) data directory used by the passive session reader | `~/.commandcode` |
-| `TOKENTRACKER_DEEPAI_CODE_USERDATA` | Override the DeepAI Code userdata root used by the passive session reader | `~/.deepai-code/userdata` |
-| `TOKENTRACKER_DEEPAI_CODE_AGENT_DIR` | Override a single DeepAI Code embedded pi agent directory | auto |
-
-### Offline usage transfer
-
-In the local dashboard, open **Settings → App → Local data**. Export usage on one computer, then select that JSON file on another computer, review the preview and confirm the merge. Imported computers appear in the dashboard's existing device selector and device distribution card. You can remove an imported source from the same settings page.
-
-Preview totals and device contributions follow the dashboard's current display metric; the original counters remain in the snapshot. Context breakdown is available with this device selected. Project, session and outcome analyses remain local to this computer, with a scope notice when offline sources are present.
-
-A newer complete snapshot replaces that computer's previous snapshot; importing the same file again does not add usage. Exports contain only this computer's retained device-level history, including token counts, tools, models, time buckets and its device label. They exclude imported sources, credentials, prompts, project/session data, and account-level Cursor/TRAE CN usage. Imported snapshots stay local and never enter the cloud upload queue. Transfer files only between computers with independent histories: copied sessions cannot be deduplicated from aggregated usage. Legacy `tokentracker-sync` synthetic queues require separate migration. Files are limited to 5 MiB, with up to 32 imported computers.
-
-### 🐧 Windows Subsystem for Linux (WSL) Auto-Discovery
-
-If you run AI coding agents inside WSL on Windows, TokenTracker can auto-discover and aggregate metrics from both native Windows and WSL installations.
-
-Configure this behavior using the `TOKENTRACKER_WSL_MODE` environment variable:
-* `both` (Recommended): Scans and aggregates metrics from both native Windows and WSL.
-* `wsl-first` (Default): Checks WSL first; if found, uses WSL metrics, otherwise falls back to Windows.
-* `native-first`: Checks native Windows first; if found, uses Windows metrics, otherwise falls back to WSL.
-* `wsl-only`: Scans WSL environment only.
-* `native-only`: Scans native Windows environment only.
-
-> [!NOTE]
-> **Preference (`-first`) vs. Isolation (`-only`):** Preference modes prioritize your choice but gracefully fall back to scanning the other environment if the tool is missing. Isolation modes strictly lock scanning to that single environment and ignore the other completely.
-
-Supported providers for WSL auto-discovery and aggregation:
-* **Dual-Install Aggregation (`both` mode):**
-  * **File-list & Active CLIs:** Every Code, Kimi (legacy & Code), Gemini CLI, Antigravity, OpenCode (JSON), Codex CLI, AStudio, CodeBuddy, WorkBuddy, WorkBuddy AI, oh-my-pi (omp), pi, DeepAI Code, GitHub Copilot (OTEL), Roo Code, Craft, Kilo Code, Droid, Cline.
-  * **SQLite-based DBs:** Hermes, Zed Agent, Goose, OpenCode (`opencode.db`), Kilo CLI, Mimo Code, DuMate, ZCode, Qoder, Claude Science (`operon-cli.db`), GitHub Copilot (App DB).
-* **WSL Auto-Discovery (Preference/Isolation only, no dual aggregation):**
-  * Grok Build (dynamically selects either native or WSL depending on the mode, but does not aggregate both in `both` mode).
-  * Devin CLI (no native Windows data directory is known, so automatic discovery only ever finds a WSL install; `native-only` mode discovers nothing and `both` never aggregates a native copy). The `TOKENTRACKER_DEVIN_DB` override still points at an explicit database file.
-
----
-
-### Extra scan roots (multiple profiles, agent harnesses)
-
-TokenTracker scans `~/.codex` and `~/.claude` (plus `CODEX_HOME` / `CLAUDE_CONFIG_DIR` when the syncing process has them set). If your sessions live somewhere else — a second profile, or an agent harness that gives Codex / Claude Code a private home — list those roots once in `~/.tokentracker/tracker/config.json` and every sync (hook-triggered, app background refresh, CLI) walks them:
-
-```json
-{
-  "scanRoots": {
-    "codex": ["~/.local/share/my-agent/codex"],
-    "claude": ["~/.local/share/my-agent/claude", "~/.claude-work"]
-  }
-}
-```
-
-Each Codex root is expected to hold `sessions/` (and optionally `archived_sessions/`), each Claude root a `projects/` directory. Roots are de-duplicated by resolved path, so a profile whose `projects/` is a symlink to another profile's is read once. `tokentracker status` and `tokentracker doctor` list the extra roots and flag any that are missing.
-
-## 🛠️ Development
-
-```bash
-git clone https://github.com/xiufengsun/TokenTracker.git
-cd TokenTracker
-npm install
-
-# Build dashboard + run CLI
-cd dashboard && npm install && npm run build && cd ..
-node bin/tracker.js
-
-# Tests
-npm test
-```
-
-### Building the macOS App
-
-```bash
-cd TokenTrackerBar
-npm run dashboard:build              # Build the dashboard bundle
-./scripts/bundle-node.sh             # Bundle Node.js + tokentracker source
-xcodegen generate                    # Generate the Xcode project
-ruby scripts/patch-pbxproj-icon.rb   # Patch in the Icon Composer asset
-xcodebuild -scheme TokenTrackerBar -configuration Release clean build
-./scripts/create-dmg.sh              # Package the .app into a DMG
-```
-
-Requires **Xcode 16+** and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
-
----
-
-## 🔧 Troubleshooting
-
-- **Antivirus quarantined `tracker.js` on Windows** — see [Antivirus false positives](docs/antivirus-false-positives.md) (suspected Kaspersky PDM false positive; vendor review still required).
-
-**ZCode totals decreased after v0.96.0?** This release corrects historical cache/reasoning double counting, including previously uploaded months. See the [ZCode history correction](docs/zcode-history-correction.md) for the accounting change and local backup details.
-
-### CLI
-
-<details>
-<summary><b>"engines.node" or unsupported version error</b></summary>
-
-<br/>
-
-TokenTracker requires **Node 20+**. Check your version:
-
-```bash
-node --version
-```
-
-If lower, upgrade via [nvm](https://github.com/nvm-sh/nvm), [fnm](https://github.com/Schniz/fnm), or your package manager (`brew upgrade node`, `apt install nodejs`).
-
-</details>
-
-<details>
-<summary><b>Port 7680 already in use</b></summary>
-
-<br/>
-
-The dashboard server picks the next free port automatically (`7681`, `7682`, ...) when `7680` is taken. The actual port is logged on startup. If you want to force a specific port:
-
-```bash
-PORT=7700 tokentracker serve
-```
-
-To find what's holding `7680`:
-
-```bash
-lsof -i :7680
-```
-
-**WSL2 note**: on Windows hosts the Delivery Optimization service (`DoSvc`) listens on `7680`, and under NAT networking the conflict is invisible from inside WSL — the server starts fine but the Windows browser reaches `DoSvc` instead. TokenTracker therefore defaults to `7681` when running under WSL (logged on startup).
-
-</details>
-
-<details>
-<summary><b>A provider isn't being detected</b></summary>
-
-<br/>
-
-Check the integration status:
-
-```bash
-tokentracker status
-```
-
-Then run the doctor for a deeper health check:
-
-```bash
-tokentracker doctor
-```
-
-If a provider shows as not configured even though you use it, try `tokentracker activate-if-needed` to re-run hook detection. If still missing, [open an issue](https://github.com/xiufengsun/TokenTracker/issues/new) with the `doctor` output attached.
-
-</details>
-
-<details>
-<summary><b>How to uninstall hooks and remove all config</b></summary>
-
-<br/>
-
-```bash
-tokentracker uninstall
-```
-
-This removes every hook TokenTracker installed across all detected AI tools, plus the local config and data. Safe to re-run.
-
-</details>
-
-### macOS App
-
-<details>
-<summary><b>"TokenTrackerBar can't be opened" — unidentified developer</b></summary>
-
-<br/>
-
-TokenTrackerBar is **ad-hoc signed** (not notarized with an Apple Developer ID — that requires a paid developer account). Gatekeeper blocks it on first launch.
-
-1. Open **System Settings → Privacy & Security**
-2. Scroll to the **Security** section — you'll see *"TokenTrackerBar was blocked to protect your Mac."*
-3. Click **Open Anyway**
-4. Confirm with **Open** in the follow-up dialog (you'll need to authenticate)
-
-You only need to do this once. Older macOS alternative: right-click the app in Finder → **Open** → **Open** in the confirmation dialog.
-
-</details>
-
-<details>
-<summary><b>"TokenTrackerBar is damaged and can't be opened"</b></summary>
-
-<br/>
-
-This is Gatekeeper reacting to the `com.apple.quarantine` attribute macOS attaches to every downloaded file — not an actual problem. Clear it once with:
-
-```bash
-xattr -cr /Applications/TokenTracker.app
-```
-
-After that the app opens normally.
-
-</details>
-
-<details>
-<summary><b>"TokenTrackerBar wants to access data from other apps"</b></summary>
-
-<br/>
-
-This is required for the **Cursor** and **Kiro** integrations. They store auth tokens / usage data inside their own `~/Library/Application Support/` folders, which macOS protects with the App Management permission.
-
-- ✅ Click **Allow** if you use Cursor or Kiro
-- ❌ Click **Don't Allow** if you don't — those providers will be silently skipped, everything else keeps working
-
-Once granted, the permission is remembered. Note that ad-hoc signed builds re-prompt after each upgrade because each build has a new signing identity.
-
-</details>
-
----
-
-## 🪪 README Badges
-
-Show off your token usage on your GitHub profile or project README.
-
-To get `YOUR_USER_ID`:
-1. Run `tokentracker`, open the dashboard, and sign in to the leaderboard.
-2. Go to **Settings → Account**.
-3. Use the **User ID** shown there. On headless machines, `tokentracker device-login` also writes the same `user_id` to `~/.tokentracker/tracker/config.json`.
-
-Then drop one of these in:
-
-```markdown
-[![tokens](https://srctyff5.us-east.insforge.app/functions/tokentracker-badge-svg?user_id=YOUR_USER_ID&metric=tokens)](https://github.com/xiufengsun/TokenTracker)
-[![cost](https://srctyff5.us-east.insforge.app/functions/tokentracker-badge-svg?user_id=YOUR_USER_ID&metric=cost)](https://github.com/xiufengsun/TokenTracker)
-[![rank](https://srctyff5.us-east.insforge.app/functions/tokentracker-badge-svg?user_id=YOUR_USER_ID&metric=rank)](https://github.com/xiufengsun/TokenTracker)
-```
-
-> The link target defaults to the TokenTracker repo so every click helps other developers discover the tool. Swap it for your leaderboard profile, personal site, or `https://www.tokentracker.cc` if you'd rather route clicks elsewhere.
-
-Renders shields.io-compatible badges with your current totals (60s cache):
-
-| Param | Values | Default |
-|---|---|---|
-| `metric` | `tokens` / `cost` / `rank` | `tokens` |
-| `period` | `week` / `month` / `total` | `total` |
-| `style` | `flat` / `flat-square` | `flat` |
-| `label` | any short string | metric name |
-| `color` | hex, e.g. `ff6b35` | brand green |
-
-> **Privacy**: badges only resolve for profiles where leaderboard sharing is **on** (`Settings → Account → Public profile`). Private profiles get a "private" placeholder.
-
----
-
-## ⭐ Star History
-
-<a href="https://www.star-history.com/?repos=xiufengsun%2FTokenTracker&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=xiufengsun/TokenTracker&type=date&theme=dark&legend=top-left&sealed_token=Vr7qbPNqOTtzQEdtkxS2yArAReX2QkBZKNJgs3n32Q5oJa1iXddLlrT201teNSnt7QnsXtDcHy_T387xvXJ_HXHrPtvH2QQ1xqQZ67N_HV45ulWrt3j6hziDW5eshRCmu8CAT_W31PY0-WVZpFv7NQD-acv1stVK8ndribTokIp9ukSYAedx3icuUrOu" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=xiufengsun/TokenTracker&type=date&legend=top-left&sealed_token=Vr7qbPNqOTtzQEdtkxS2yArAReX2QkBZKNJgs3n32Q5oJa1iXddLlrT201teNSnt7QnsXtDcHy_T387xvXJ_HXHrPtvH2QQ1xqQZ67N_HV45ulWrt3j6hziDW5eshRCmu8CAT_W31PY0-WVZpFv7NQD-acv1stVK8ndribTokIp9ukSYAedx3icuUrOu" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=xiufengsun/TokenTracker&type=date&legend=top-left&sealed_token=Vr7qbPNqOTtzQEdtkxS2yArAReX2QkBZKNJgs3n32Q5oJa1iXddLlrT201teNSnt7QnsXtDcHy_T387xvXJ_HXHrPtvH2QQ1xqQZ67N_HV45ulWrt3j6hziDW5eshRCmu8CAT_W31PY0-WVZpFv7NQD-acv1stVK8ndribTokIp9ukSYAedx3icuUrOu" />
-  </picture>
-</a>
-
----
-
-## 🤝 Contributing & Support
-
-- **Bugs / feature requests**: [open an issue](https://github.com/xiufengsun/TokenTracker/issues/new)
-- **Security**: see [SECURITY.md](SECURITY.md) — please don't open public issues for security reports
-- **Pull requests**: see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, and how to add a new AI tool integration
-- **Questions / showcase**: [GitHub Discussions](https://github.com/xiufengsun/TokenTracker/discussions)
-
-## 🙏 Credits
-
-The `bot` companion's morphing engine is [bloub](https://github.com/jeremy-prt/bloub) by Jérémy Perret (MIT).
-
-The Clawd character design belongs to Anthropic. This is a community project with no official affiliation with Anthropic.
-
-## 🔗 Friendly Links
-
-- [LINUX DO](https://linux.do) — a developer community we like
-
-## License
-
-[MIT](LICENSE)
-
----
-
-<div align="center">
-
-**Token Tracker** — Quantify your AI output.
-
-<a href="https://www.tokentracker.cc">tokentracker.cc</a>  ·  <a href="https://www.npmjs.com/package/tokentracker-cli">npm</a>  ·  <a href="https://github.com/xiufengsun/TokenTracker">GitHub</a>
-
-</div>
+感谢原作者 @xiufengsun 和所有上游贡献者，本分支的一切都建立在他们的工作之上。
