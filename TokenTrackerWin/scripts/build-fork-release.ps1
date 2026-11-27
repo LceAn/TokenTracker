@@ -111,11 +111,21 @@ try {
     Run npm @('run', '-s', 'dashboard:build')
 
     $bundles = Get-ChildItem dashboard/dist/assets -Filter *.js -File | Select-Object -ExpandProperty FullName
-    foreach ($needle in $forkVersion, "$ForkRepo/releases/latest") {
-        if (-not (Select-String -Path $bundles -SimpleMatch -Pattern $needle -List)) {
-            throw "The dashboard bundle does not carry '$needle'."
-        }
+    if (-not (Select-String -Path $bundles -SimpleMatch -Pattern $forkVersion -List)) {
+        throw "The dashboard bundle does not carry the version '$forkVersion'."
     }
+    # The browser-mode update check builds its request URL from the repository
+    # named at build time, so read the repository from the very file that makes
+    # that request (looking for the name anywhere would be satisfied by its
+    # mere mention in the UI copy).
+    $updateChunk = Get-ChildItem dashboard/dist/assets -Filter *.js -File | Where-Object {
+        [System.IO.File]::ReadAllText($_.FullName) -match 'api\.github\.com/repos/.{1,16}?/releases/latest'
+    } | Select-Object -First 1
+    if (-not $updateChunk) { throw 'The dashboard bundle has no browser-mode update check to verify.' }
+    if (-not ([System.IO.File]::ReadAllText($updateChunk.FullName)).Contains('"' + $ForkRepo + '"')) {
+        throw "The browser-mode update check in $($updateChunk.Name) does not look in '$ForkRepo'."
+    }
+    Write-Host "Browser-mode update check follows: $ForkRepo"
 
     # ── bundled Node runtime + CLI ────────────────────────────────────
     Step 'Embedded server (Node runtime + CLI + dashboard)'
