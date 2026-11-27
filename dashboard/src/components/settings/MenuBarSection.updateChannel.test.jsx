@@ -49,19 +49,21 @@ const FORK_SETTINGS = {
 
 const CHANNEL_LABEL = "settings.menubar.updateChannel";
 
-const renderSection = () =>
-  render(
+function renderSection() {
+  return render(
     <MemoryRouter>
       <MenuBarSection />
     </MemoryRouter>,
   );
+}
 
-const renderFooter = (Footer = NativeAppFooter) =>
-  render(
+function renderFooter(Footer = NativeAppFooter) {
+  return render(
     <MemoryRouter>
       <Footer />
     </MemoryRouter>,
   );
+}
 
 async function choose(label, option) {
   const user = userEvent.setup();
