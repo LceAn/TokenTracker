@@ -289,6 +289,24 @@ public sealed class UpdateChannelTests
     }
 
     [Fact]
+    public async Task AReleaseFromAnotherChannelStaysMarkedUntilItIsInstalledOrForgotten()
+    {
+        using var http = Http(_ => ApiRelease("v1.5.29", OfficialDownloads));
+        var checker = new UpdateChecker(http, _ => UpdateChannel.Official, ForkBuild);
+        Assert.False(checker.PreparedReleaseCrossesChannels);
+
+        await checker.CheckAsync(silent: false);
+
+        // Installing it has to know it is a channel switch even while the state
+        // is no longer UpdateAvailable, so that the tray can restore the default
+        // channel at hand-over.
+        Assert.True(checker.PreparedReleaseCrossesChannels);
+        Assert.True(checker.PendingReleaseCrossesChannels);
+        Assert.True(checker.Reset());
+        Assert.False(checker.PreparedReleaseCrossesChannels);
+    }
+
+    [Fact]
     public async Task ResetIsRefusedWhileACheckIsInFlight()
     {
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

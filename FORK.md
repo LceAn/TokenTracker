@@ -39,7 +39,7 @@ Windows 客户端可以在「设置 → App 与更新 → 更新渠道」里选�
 - **社区分支**（默认）：跟随本分支的发布。
 - **官方版本**：跟随上游的官方发布。选中后，下一次更新会把社区分支版本替换成官方版本，社区分支独有的功能会被移除。安装前一定会让你确认，不会在后台自己换掉。
 
-从社区分支换到官方版本之后，官方客户端不认识本分支，想换回来需要重新下载本分支的安装包安装。
+从社区分支换到官方版本之后，官方客户端不认识本分支，想换回来需要重新下载本分支的安装包安装。换过去的那一刻，「官方版本」这个选择会自动清除，所以重新安装社区分支后，它又会默认跟随社区分支。
 
 macOS 和 Linux 客户端没有这个选项，它们的应用仍然只跟随官方发布。
 
@@ -129,7 +129,7 @@ The Windows app has an **Update channel** row under Settings → App & Updates:
 - **Community fork** (the default): follows this fork's releases.
 - **Official release**: follows the upstream releases. The next update then replaces the fork build with the official version, which removes the features that exist only in the fork. You are always asked to confirm first; it never switches on its own in the background.
 
-Once you are on the official release, the official app does not know about this fork. To come back, download this fork's installer and run it again.
+Once you are on the official release, the official app does not know about this fork. To come back, download this fork's installer and run it again. The "Official release" choice clears itself at the moment of the hand-over, so after reinstalling the fork it follows the fork again by default.
 
 The macOS and Linux apps do not have this option and keep following the official releases.
 

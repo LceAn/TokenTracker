@@ -100,11 +100,18 @@ internal sealed class UpdateChecker
     public bool CanChooseChannel => _installed.Channel == UpdateChannel.Fork;
 
     /// <summary>
-    /// The pending release comes from another channel than this build. Installing
-    /// it replaces the build family, so it is never installed unattended.
+    /// The prepared release comes from another channel than this build.
+    /// Installing it replaces the build family, so it is never installed unattended.
+    /// </summary>
+    internal bool PreparedReleaseCrossesChannels
+        => _pendingChannel is { } prepared && prepared != _installed.Channel;
+
+    /// <summary>
+    /// The pending release comes from another channel than this build and is
+    /// still waiting for the user (see <see cref="PreparedReleaseCrossesChannels"/>).
     /// </summary>
     public bool PendingReleaseCrossesChannels
-        => State == UpdateState.UpdateAvailable && _pendingChannel is { } pending && pending != _installed.Channel;
+        => State == UpdateState.UpdateAvailable && PreparedReleaseCrossesChannels;
 
     public string ReleasePageUrl => Channel.ReleasePageUrl;
 
@@ -260,6 +267,17 @@ internal sealed class UpdateChecker
             Diag.Log("update", $"installer launch failed: {ex.Message}");
             SetState(UpdateState.UpdateAvailable);
             return false;
+        }
+
+        // The channel choice has done its job once it hands over to another
+        // channel's installer: this build is about to be replaced and the
+        // incoming one does not read the choice. Put this build's own channel
+        // back, so a later return to it does not start out with a stale request
+        // to leave it again.
+        if (PreparedReleaseCrossesChannels)
+        {
+            Diag.Log("update", $"leaving channel={_installed.Channel.Id}; restoring it as the update channel");
+            UpdateChannelPolicy.SetSelected(_installed.Channel);
         }
 
         QuitRequested?.Invoke();
