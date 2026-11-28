@@ -354,7 +354,7 @@ async function parseRolloutIncremental({
   const projectFreshnessNowMs = Date.now();
   const touchedBuckets = new Set();
   const defaultSource = normalizeSourceInput(source) || DEFAULT_SOURCE;
-  preserveCodexModelBuckets(hourlyState, touchedBuckets);
+  await preserveCodexModelBuckets(hourlyState, touchedBuckets, queuePath);
   const syncDiagnostics = diagnostics && typeof diagnostics === "object" ? diagnostics : null;
 
   if (!cursors.files || typeof cursors.files !== "object") {
@@ -1086,6 +1086,12 @@ async function parseClaudeIncremental({
   // (e.g. subagent file created after main session was already parsed).
   const prevHashes = Array.isArray(cursors.claudeHashes) ? cursors.claudeHashes : [];
   const seenMessageHashes = new Set(prevHashes);
+  // Also index bare message.id values so a persisted `msgId:requestId` matches a
+  // later `sdk-cli` copy that only carries message.id (#1167).
+  for (const hash of prevHashes) {
+    const bare = claudeBareMessageId(hash);
+    if (bare) seenMessageHashes.add(bare);
+  }
   const defaultSource = normalizeSourceInput(source) || "claude";
   preserveLegacyClaudeGroups(files.filter((entry) =>
     (typeof entry === "string" ? defaultSource : normalizeSourceInput(entry?.source) || defaultSource) === "claude"
@@ -3222,8 +3228,8 @@ async function parseClaudeFile({
     const usage = obj?.message?.usage || obj?.usage;
     if (!usage || typeof usage !== "object") continue;
 
-    const dedupHash = seenMessageHashes ? claudeMessageDedupKey(obj) : null;
-    if (dedupHash && seenMessageHashes.has(dedupHash)) continue;
+    const dedupKeys = seenMessageHashes ? claudeMessageDedupKeys(obj) : [];
+    if (dedupKeys.some((key) => seenMessageHashes.has(key))) continue;
 
     const model = normalizeModelInput(obj?.message?.model || obj?.model) || DEFAULT_MODEL;
     const tokenTimestamp = typeof obj?.timestamp === "string" ? obj.timestamp : null;
@@ -3232,7 +3238,7 @@ async function parseClaudeFile({
     const delta = normalizeClaudeUsage(usage);
     if (!delta || isAllZeroUsage(delta)) continue;
 
-    if (dedupHash) seenMessageHashes.add(dedupHash);
+    for (const key of dedupKeys) seenMessageHashes.add(key);
     delta.conversation_count = 0;
     const backend = backendResolver?.(obj, lineStart, byteOffset);
     if (backend) delta.backend_usage = [{ ...delta, ...backend }];
@@ -3542,6 +3548,30 @@ async function parseOpencodeMessageFile({
   };
 }
 
+// Recover the latest per-model rows for legacy groups that were already split
+// in the queue. A cursor can still contain an older, partial split (#1130).
+async function readLegacyCodexRows(queuePath, legacyGroups) {
+  const groups = new Map();
+  if (!legacyGroups.size) return groups;
+  const stream = fssync.createReadStream(queuePath);
+  try {
+    for await (const { line, terminated } of physicalJsonlRecords(stream)) {
+      if (!line || !terminated) continue;
+      let row;
+      try { row = JSON.parse(line); } catch { continue; }
+      if (row?.kind || row?.source !== DEFAULT_SOURCE || !row.hour_start) continue;
+      const hour = toUtcHalfHourStart(row.hour_start);
+      const group = groupBucketKey(DEFAULT_SOURCE, hour);
+      if (!legacyGroups.has(group) || !Number.isFinite(row.total_tokens)) continue;
+      if (!groups.has(group)) groups.set(group, new Map());
+      groups.get(group).set(normalizeModelInput(row.model) || DEFAULT_MODEL, row);
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  return groups;
+}
+
 // Codex models are observed per rollout/turn. A busier sibling agent in the
 // same half-hour is not evidence for the model of an unnamed request (#927).
 // Re-emit stored buckets once on upgrade, including idle historical groups:
@@ -3553,7 +3583,7 @@ async function parseOpencodeMessageFile({
 // rows (#1052). Re-emitting that flattened unknown invents an `unknown`
 // sibling (and can zero a stale alignedModel) beside the named rows. Skip
 // re-emit for those flattened legacy groups; clear the marker only.
-function preserveCodexModelBuckets(hourlyState, touchedBuckets) {
+async function preserveCodexModelBuckets(hourlyState, touchedBuckets, queuePath) {
   const upgrading = hourlyState.modelAttributionPolicy?.codex !== "observed";
   const groupQueued =
     hourlyState.groupQueued && typeof hourlyState.groupQueued === "object"
@@ -3588,11 +3618,23 @@ function preserveCodexModelBuckets(hourlyState, touchedBuckets) {
     if (!entry || !entry.named) flattenedLegacyGroups.add(groupKey);
   }
 
+  const queued = await readLegacyCodexRows(queuePath, legacyGroups);
+  const restored = new Set();
+  for (const [group, rows] of queued) {
+    if (Array.from(rows).some(([model, row]) => model !== DEFAULT_MODEL && row.total_tokens > 0)) {
+      restored.add(group);
+    }
+  }
+
   for (const [key, bucket] of Object.entries(hourlyState.buckets || {})) {
     const parsed = parseBucketKey(key);
     if (parsed.source !== DEFAULT_SOURCE || !bucket?.totals) continue;
     const groupKey = groupBucketKey(parsed.source, parsed.hourStart);
     const legacy = legacyGroups.has(groupKey);
+    if (restored.has(groupKey)) {
+      delete hourlyState.buckets[key];
+      continue;
+    }
     if (flattenedLegacyGroups.has(groupKey)) continue;
     if (!upgrading && !legacy) continue;
     bucket.queuedKey = null;
@@ -3600,6 +3642,18 @@ function preserveCodexModelBuckets(hourlyState, touchedBuckets) {
     touchedBuckets.add(key);
   }
   for (const groupKey of legacyGroups) {
+    if (restored.has(groupKey)) {
+      const hour = groupKey.slice(DEFAULT_SOURCE.length + BUCKET_SEPARATOR.length);
+      for (const [model, row] of queued.get(groupKey)) {
+        const bucket = getHourlyBucket(hourlyState, DEFAULT_SOURCE, model, hour);
+        bucket.totals = cloneTotals(row);
+        const key = totalsKey(bucket.totals);
+        if (row.usage_precision) bucket.usage_precision = row.usage_precision;
+        bucket.queuedKey = row.usage_precision ? `${key}|${row.usage_precision}` : key;
+      }
+      delete groupQueued[groupKey];
+      continue;
+    }
     if (flattenedLegacyGroups.has(groupKey)) {
       delete groupQueued[groupKey];
       continue;
@@ -5461,11 +5515,30 @@ function isOmOClaudeSdkMirror(obj) {
   return obj?.entrypoint === "sdk-ts" && obj?.userType === "external";
 }
 
-function claudeMessageDedupKey(obj) {
+function claudeBareMessageId(hash) {
+  if (typeof hash !== "string" || !hash || hash.startsWith("u:")) return null;
+  const colon = hash.indexOf(":");
+  return colon > 0 ? hash.slice(0, colon) : null;
+}
+
+function claudeMessageDedupKeys(obj) {
   const msgId = typeof obj?.message?.id === "string" && obj.message.id ? obj.message.id : null;
-  if (!msgId) return null;
+  if (!msgId) return [];
   const reqId = typeof obj?.requestId === "string" && obj.requestId ? obj.requestId : null;
-  return reqId ? `${msgId}:${reqId}` : msgId;
+  return reqId ? [`${msgId}:${reqId}`, msgId] : [msgId];
+}
+
+function claudeMessageDedupKey(obj) {
+  return claudeMessageDedupKeys(obj)[0] || null;
+}
+
+function claudeMessageAlreadySeen(seen, keys) {
+  return Boolean(seen) && (keys || []).some((key) => seen.has(key));
+}
+
+function rememberClaudeMessage(seen, keys) {
+  if (!seen) return;
+  for (const key of keys || []) seen.add(key);
 }
 
 function normalizeClaudeUsage(u) {
@@ -17059,7 +17132,9 @@ function ompEntryTimestampMs(msg, entry) {
 // records are orders of magnitude smaller.
 const OMP_LIKE_MAX_RECORD_BYTES = 64 * 1024 * 1024;
 
-async function scanOmpLikeTranscript(filePath, startOffset, maxRecordBytes, onEntry, { recoverReadErrors = false } = {}) {
+const OMP_USAGE_KEY_BYTES = Buffer.from('"usage"');
+
+async function scanOmpLikeTranscript(filePath, startOffset, maxRecordBytes, onEntry, { mustContain = null, recoverReadErrors = false } = {}) {
   let stream;
   try {
     stream = fssync.createReadStream(filePath, { start: startOffset });
@@ -17072,6 +17147,7 @@ async function scanOmpLikeTranscript(filePath, startOffset, maxRecordBytes, onEn
     for await (const record of physicalJsonlRecords(stream, {
       invalidUtf8: "record",
       maxRecordBytes,
+      mustContain,
     })) {
       scannedEndOffset += record.physicalBytes;
       if (record.terminated) {
@@ -17281,7 +17357,7 @@ async function parseOmpLikeIncremental({
           bucketsQueued: touchedBuckets.size,
         });
       }
-    });
+    }, { mustContain: OMP_USAGE_KEY_BYTES });
 
     fileOffsets[filePath] = {
       size: committedEndOffset,
@@ -17379,7 +17455,7 @@ async function parseOmpLikeIncremental({
           addTotals(projectBucket.totals, delta);
           projectTouchedBuckets.add(projectBucketKey(projectKey, source, bucketStart));
           projectSeenIds.add(entryId);
-        });
+        }, { mustContain: OMP_USAGE_KEY_BYTES });
       }
 
       projectFileOffsets[filePath] = {
@@ -27114,6 +27190,10 @@ module.exports = {
   toUtcHalfHourStart,
   totalsKey,
   claudeMessageDedupKey,
+  claudeMessageDedupKeys,
+  claudeBareMessageId,
+  claudeMessageAlreadySeen,
+  rememberClaudeMessage,
   normalizeClaudeUsage,
   groupBucketKey,
   // Exposed for regression tests covering nested-group remote URLs.

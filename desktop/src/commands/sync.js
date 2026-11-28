@@ -161,6 +161,8 @@ const {
   toUtcHalfHourStart,
   totalsKey,
   claudeMessageDedupKey,
+  claudeMessageDedupKeys,
+  rememberClaudeMessage,
   coerceEpochMs,
   hasZcodeCursorState,
   resolveZcodeInstallPaths,
@@ -212,7 +214,7 @@ const {
   resolveScanRoots,
   scanRootDirState,
 } = require("../lib/scan-roots");
-const { resolveRuntimeConfig, isLegacyInsforgeBaseUrl, DEFAULT_BASE_URL, CLOUDFLARE_API_URL } = require("../lib/runtime-config");
+const { resolveRuntimeConfig, dataBaseUrlFor, isLegacyInsforgeBaseUrl, DEFAULT_BASE_URL, CLOUDFLARE_API_URL } = require("../lib/runtime-config");
 const { resolveDeviceTokenPresence } = require("../lib/cloud-device-token");
 
 function formatSyncUploadSummaryLine({ runtimeDeviceToken, uploadResult, tokenPresentOnDisk }) {
@@ -3736,14 +3738,15 @@ async function cmdSync(argv, context = {}) {
       }
       try {
         let successfulDeviceToken = runtime.deviceToken;
+        const uploadOrigin = dataBaseUrlFor(runtime.baseUrl);
         const configuredMirror = runtimeConfig.cloudflareDualWrite;
         let mirrorUsageToCloudflare = typeof configuredMirror === "boolean" ? configuredMirror : undefined;
         if (process.env.TOKENTRACKER_CLOUDFLARE_DUAL_WRITE === "1") mirrorUsageToCloudflare = true;
         if (process.env.TOKENTRACKER_CLOUDFLARE_DUAL_WRITE === "0") mirrorUsageToCloudflare = false;
         const drainWithToken = (deviceToken) =>
           drainQueueToCloud({
-            baseUrl: runtime.baseUrl,
-            anonKey: runtime.anonKey,
+            baseUrl: uploadOrigin,
+            anonKey: uploadOrigin === CLOUDFLARE_API_URL ? undefined : runtime.anonKey,
             deviceToken,
             queuePath,
             queueStatePath,
@@ -4530,10 +4533,45 @@ async function drainQueueToCloud({ baseUrl, anonKey, deviceToken, queuePath, que
   const queueSize = await safeStatSize(queuePath);
   const limit = Math.min(Math.max(1, Math.floor(Number(batchSize || 200))), MAX_INGEST_BUCKETS);
 
+  // The account view adds the rows past the cursor to the cloud aggregate
+  // (account-pending-overlay.js). That is only sound while the cloud holds
+  // the rows before the cursor and none after it, which
+  // `cloudBaselineOffset === offset` records. A drain that reaches the end of
+  // the queue establishes it, and every committed batch moves it with the
+  // cursor. Any other writer that moves the cursor (replays, repairs, owner
+  // changes) leaves it behind, which turns the overlay off until the next
+  // full drain. `uploadingSince` marks a request whose rows the cloud may
+  // already hold while the cursor does not show them yet; one left behind by
+  // a run that died mid-request means the baseline is unknown.
+  let baselineKnown = Number.isSafeInteger(offset) && Number(state.cloudBaselineOffset) === offset &&
+    !state.uploadingSince;
+  if (!baselineKnown) delete state.cloudBaselineOffset;
+  delete state.uploadingSince;
+  const commitOffset = async (nextOffset) => {
+    offset = nextOffset;
+    state.offset = offset;
+    if (baselineKnown || offset >= queueSize) {
+      baselineKnown = true;
+      state.cloudBaselineOffset = offset;
+    } else {
+      delete state.cloudBaselineOffset;
+    }
+    delete state.uploadingSince;
+    state.updatedAt = new Date().toISOString();
+    await writeJson(queueStatePath, state);
+  };
+
   try {
     for (let batch = 0; batch < batchBudget; batch++) {
       if (Date.now() >= deadline) break;
-      if (offset >= queueSize) break;
+      if (offset >= queueSize) {
+        if (!baselineKnown) {
+          baselineKnown = true;
+          state.cloudBaselineOffset = offset;
+          await writeJson(queueStatePath, state);
+        }
+        break;
+      }
       const result = await readQueueBatch(queuePath, offset, limit);
       // A states-only tail (e.g. a retry batch whose bucket rows already
       // uploaded) is still a meaningful upload: it advances the canonical
@@ -4541,16 +4579,12 @@ async function drainQueueToCloud({ baseUrl, anonKey, deviceToken, queuePath, que
       if (result.buckets.length === 0 && result.sessionStates.length === 0) {
         // Complete ignored control/malformed rows need no cloud request, but
         // must not leave a permanent pending tail. Incomplete bytes stay put.
-        if (result.nextOffset > offset) {
-          offset = result.nextOffset;
-          state.offset = offset;
-          state.updatedAt = new Date().toISOString();
-          await writeJson(queueStatePath, state);
-        }
+        if (result.nextOffset > offset) await commitOffset(result.nextOffset);
         break;
       }
 
       const root = baseUrl.replace(/\/$/, "");
+      const redirect = root === CLOUDFLARE_API_URL ? "error" : undefined;
       const headers = {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -4565,7 +4599,7 @@ async function drainQueueToCloud({ baseUrl, anonKey, deviceToken, queuePath, que
         if (probeBudget <= 0) break;
         requestSignal = AbortSignal.timeout(Math.max(1, Math.ceil(probeBudget)));
         const probe = await fetchFunctionResponse(functionUrlFor(root, INGEST_SLUG), {
-          method: "POST", headers, signal: requestSignal, body: JSON.stringify({ kind: "cost_capabilities" }),
+          method: "POST", headers, redirect, signal: requestSignal, body: JSON.stringify({ kind: "cost_capabilities" }),
         });
         let capabilities = {};
         try { capabilities = JSON.parse(await probe.text()); } catch { /* unsupported legacy server */ }
@@ -4581,9 +4615,12 @@ async function drainQueueToCloud({ baseUrl, anonKey, deviceToken, queuePath, que
       const remainingMs = deadline - Date.now();
       if (remainingMs <= 0) break;
       requestSignal = AbortSignal.timeout(Math.max(1, Math.ceil(remainingMs)));
+      state.uploadingSince = new Date().toISOString();
+      await writeJson(queueStatePath, state);
       const res = await fetchFunctionResponse(functionUrlFor(root, INGEST_SLUG), {
         method: "POST",
         headers,
+        redirect,
         signal: requestSignal,
         body: JSON.stringify({
           upload_id: uploadId,
@@ -4601,6 +4638,7 @@ async function drainQueueToCloud({ baseUrl, anonKey, deviceToken, queuePath, que
       if (!res.ok) {
         const err = new Error(`HTTP ${res.status}: ${rawText.substring(0, 500)}`);
         err.status = res.status;
+        err.ingestRejected = res.status >= 400 && res.status < 500;
         err.code = res.status === 401 ? "CLOUD_DEVICE_TOKEN_REJECTED"
           : typeof data?.code === "string" ? data.code
             : res.status === 403 ? "CLOUD_UPLOAD_FORBIDDEN" : "CLOUD_UPLOAD_FAILED";
@@ -4623,12 +4661,19 @@ async function drainQueueToCloud({ baseUrl, anonKey, deviceToken, queuePath, que
       skipped += Number(data?.skipped || 0);
       batches += 1;
 
-      offset = result.nextOffset;
-      state.offset = offset;
-      state.updatedAt = new Date().toISOString();
-      await writeJson(queueStatePath, state);
+      await commitOffset(result.nextOffset);
     }
   } catch (error) {
+    if (state.uploadingSince) {
+      delete state.uploadingSince;
+      // A rejection (4xx) stored nothing. Without a response, or after a 5xx,
+      // the batch may be in the cloud while the cursor sits before it.
+      if (!error?.ingestRejected) {
+        baselineKnown = false;
+        delete state.cloudBaselineOffset;
+      }
+      await writeJson(queueStatePath, state).catch(() => {});
+    }
     // A bounded drain can finish partially without discarding successful
     // offsets or the server cooldown. Other failures retain their retry path.
     const requestTimedOut = requestSignal?.aborted && requestSignal.reason?.name === "TimeoutError" &&
@@ -8012,8 +8057,7 @@ async function collectClaudeMessageHashes(filePaths) {
       } catch (_e) {
         continue;
       }
-      const hash = claudeMessageDedupKey(obj);
-      if (hash) hashes.add(hash);
+      rememberClaudeMessage(hashes, claudeMessageDedupKeys(obj));
     }
     rl.close();
     stream.close?.();
