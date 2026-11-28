@@ -27,8 +27,19 @@ Token Tracker 是一个本地优先的 AI 用量统计工具。它读取你电�
 | **更新渠道可选**（仅 Windows） | 在设置里选择跟随本分支还是官方版本的发布，见下文。 |
 | **「关于」页面** | 「设置 → 应用 → 关于」：项目介绍、版本、许可证和贡献者。 |
 | **服务端部署指南** | 新增 [`server/README.md`](server/README.md)：怎样部署自己的云端，客户端怎样连上去。 |
+| **在线实例** | 本分支自己部署了一个实例：[token.lcean.com](https://token.lcean.com)。不想自己搭服务器的可以直接用，见下文「在线版」。 |
 
 前四项和「关于」页面已经作为 PR 提交给上游（[#1082](https://github.com/xiufengsun/TokenTracker/pull/1082)、[#1084](https://github.com/xiufengsun/TokenTracker/pull/1084)、[#1085](https://github.com/xiufengsun/TokenTracker/pull/1085)、[#1086](https://github.com/xiufengsun/TokenTracker/pull/1086)、[#1081](https://github.com/xiufengsun/TokenTracker/pull/1081)），通过了测试并按评审意见返工过；截至 2026-11-28 还没有合并，是否已合并请以上游页面为准。
+
+## 在线版
+
+本分支自己部署了一个实例，可以直接用：**[token.lcean.com](https://token.lcean.com)**。它就是「自部署」那一套服务端，只是由本分支来运维；不想自己搭服务器的，可以跳过部署这一步。
+
+- **在浏览器里用。** 打开上面的地址，注册并登录。网页里看到的是同步到这个实例的用量，所以要先在命令行或桌面程序里登录同一个账号。
+- **让桌面程序连到它。** 在「设置 → 云服务 → 服务器」里点「使用自部署服务器」，「服务器地址」填 `https://token-api.lcean.com`，anon key 填 `anon_79c2466a4c5e1056782103762bd223554bf33be1`。先点「测试连接」，通过后再保存；保存会退出当前登录，在新服务器上重新登录即可。这个 anon key 是实例的公开访问凭据，本来就包含在公开的网页里，不是秘密。
+- **数据在哪里。** 用量记录仍然只在你自己的电脑上解析。登录之后同步到实例的只有用量数据（token 数、时间、模型、费用），不含对话内容。
+
+实例由维护者个人运营，地址和是否开放注册都可能调整。想完全自己掌握，就按 [server/README.md](server/README.md) 部署一份，客户端的填法相同。
 
 ## 下载
 
@@ -55,7 +66,7 @@ desktop/   桌面程序：本地采集、本地服务、界面，以及 Windows 
 server/    服务端：可以自己部署的云端（安装器、数据库结构、Cloudflare Worker）
 ```
 
-想在设置里选「自部署实例」，需要先有一个自己的服务端。部署方法见 [server/README.md](server/README.md)。
+在设置里选「自部署实例」，可以选上面在线版这样的现成实例，也可以自己部署一份，方法见 [server/README.md](server/README.md)。
 
 ## 怎么维护
 
@@ -70,7 +81,7 @@ server/    服务端：可以自己部署的云端（安装器、数据库结构
 
 本分支为什么存在、现在能做什么、接下来做什么，见仓库 Issues 里的置顶公告。
 
-使用问题、部署问题和改进建议，欢迎在本仓库提 [Issue](https://github.com/LceAn/TokenTracker/issues)。请不要在 issue 里贴 token、密钥或 anon key。
+使用问题、部署问题和改进建议，欢迎在本仓库提 [Issue](https://github.com/LceAn/TokenTracker/issues)。请不要在 issue 里贴 token、密钥或 anon key；在线版公开的那个 anon key 除外，它本来就是公开的。
 
 ## 许可
 

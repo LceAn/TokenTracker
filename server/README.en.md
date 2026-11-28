@@ -7,8 +7,8 @@ This directory holds the **server-side source** of TokenTracker. If you want to 
 Three things to know up front:
 
 - **The official cloud is a paid hosted service; self-hosting is free**, but you own the server, domain, backups and upgrades. Self-hosting runs the MIT-licensed code in this repository; the scripts the official cloud runs are not necessarily identical to the repository.
-- **Self-hosting is a technical preview, not a one-click install.** Upstream verified the installer and the functions in an isolated Linux environment. The full chain of "a public server plus a packaged desktop app" was not verified upstream, and has not been verified in this fork either.
-- **On the client side**, this fork already lets you enter a self-hosted instance's address under Settings → Cloud. No environment variables needed.
+- **Self-hosting is a technical preview, not a one-click install.** Upstream verified the installer and the functions in an isolated Linux environment. The full chain of "a public server plus a packaged desktop app" was not verified upstream. This fork now runs a public instance (see [Hosted instance](../README.en.md#hosted-instance) in the root README) and has verified the "Test connection" and "save and switch" steps against it with the server code that ships in the package; sign-in and sync have not been verified end to end on a packaged desktop app.
+- **On the client side**, this fork already lets you enter a self-hosted instance's address under Settings → Cloud. No environment variables needed. If you would rather not deploy your own, use the instance this fork runs; the values to enter are in the [root README](../README.en.md#hosted-instance).
 
 ## What is in this directory
 

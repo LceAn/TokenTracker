@@ -27,8 +27,19 @@ When the official cloud became a paid subscription, users who wanted cloud sync 
 | **Choice of update channel** (Windows only) | Settings picks whether the app follows this fork's releases or the official ones. See below. |
 | **About page** | Settings → App → About: project introduction, version, license and contributors. |
 | **Server deployment guide** | A new [`server/README.md`](server/README.md) (English: [`server/README.en.md`](server/README.en.md)): how to deploy your own cloud, and how to point a client at it. |
+| **Hosted instance** | This fork runs an instance of its own: [token.lcean.com](https://token.lcean.com). If you would rather not run a server, use it as it is; see Hosted instance below. |
 
 The first four and the About page were submitted upstream as PRs ([#1082](https://github.com/xiufengsun/TokenTracker/pull/1082), [#1084](https://github.com/xiufengsun/TokenTracker/pull/1084), [#1085](https://github.com/xiufengsun/TokenTracker/pull/1085), [#1086](https://github.com/xiufengsun/TokenTracker/pull/1086), [#1081](https://github.com/xiufengsun/TokenTracker/pull/1081)). They pass their tests and were reworked after review; as of 2026-11-28 none had been merged. Check the PR pages for the current state.
+
+## Hosted instance
+
+This fork runs an instance of its own, ready to use: **[token.lcean.com](https://token.lcean.com)**. It is the same server as a self-hosted deployment, operated by this fork, so you can skip the deployment step.
+
+- **In a browser.** Open the address above, sign up and sign in. The web page shows the usage that has been synced to this instance, so sign in to the same account from the command line or the desktop app first.
+- **Point the desktop app at it.** Under Settings → Cloud → Server, choose **Use self-hosted server**. For **Server address** enter `https://token-api.lcean.com`, and for **Anon key** `anon_79c2466a4c5e1056782103762bd223554bf33be1`. Click **Test connection** first, then save. Saving signs you out; sign in again on the new server. The anon key is the instance's public access credential. It is part of the public web page anyway, not a secret.
+- **Where the data is.** Usage records are still parsed on your own computer. Only usage data (token counts, timestamps, models, cost) is synced to the instance after you sign in, never the conversation.
+
+The instance is run by the maintainer as an individual; its address and whether sign-up is open may change. To be fully in control, deploy your own with [server/README.en.md](server/README.en.md); the client is filled in the same way.
 
 ## Download
 
@@ -55,7 +66,7 @@ desktop/   the desktop app: local collection, the local server, the dashboard, a
 server/    the server: the cloud you can deploy yourself (installer, database schema, Cloudflare Worker)
 ```
 
-To pick a self-hosted instance in Settings you first need a server of your own. See [server/README.en.md](server/README.en.md).
+A self-hosted instance in Settings can be one that already exists, like the hosted instance above, or one you deploy yourself with [server/README.en.md](server/README.en.md).
 
 ## How it is maintained
 
@@ -70,7 +81,7 @@ Step by step: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Why this fork exists, what it can do now and what comes next: see the pinned announcement among the repository's issues.
 
-Usage questions, deployment problems and suggestions are welcome as [issues](https://github.com/LceAn/TokenTracker/issues) in this repository. Please never paste tokens, secrets or anon keys into an issue.
+Usage questions, deployment problems and suggestions are welcome as [issues](https://github.com/LceAn/TokenTracker/issues) in this repository. Please never paste tokens, secrets or anon keys into an issue, except for the hosted instance's public anon key, which is public anyway.
 
 ## License
 
