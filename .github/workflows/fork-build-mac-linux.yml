@@ -1,0 +1,763 @@
+name: fork build (macOS + Linux)
+
+# Builds the fork's macOS DMG and Linux packages for a fork release tag and
+# uploads them as workflow artifacts. Publishing is a separate, manual step, so
+# nothing here writes to a release.
+#
+# The other workflows in this directory are upstream's: their paths predate the
+# desktop/ + server/ split and they publish through upstream's release process.
+# This file is the fork's own and is not touched by the weekly upstream sync.
+#
+# What makes these builds "the fork": the tagged source carries the fork's
+# dashboard and embedded server, and the build stamps desktop/FORK_VERSION into
+# the app (MARKETING_VERSION for Xcode, the merged Tauri config for Linux) and
+# points the dashboard at the fork's releases (VITE_RELEASE_REPO). Upstream's
+# version files keep upstream's number; they are only checked against each other.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Fork release tag to build (e.g. v2.0.0). Its desktop/FORK_VERSION must match."
+        required: true
+        type: string
+      run_tests:
+        description: "Run the test suites on both platforms alongside the builds"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-build-${{ inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  # Keep in sync with $ForkRepo in desktop/TokenTrackerWin/scripts/build-fork-release.ps1.
+  FORK_RELEASE_REPO: LceAn/TokenTracker
+
+jobs:
+  # ───────────────────────────── macOS ─────────────────────────────
+  macos:
+    name: macOS DMG (universal)
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          persist-credentials: false
+
+      - name: Read the fork version from the tagged source
+        id: fork
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < desktop/FORK_VERSION)"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::desktop/FORK_VERSION is not x.y.z: '$version'"
+            exit 1
+          fi
+          if [[ "v$version" != "$TAG" ]]; then
+            echo "::error::$TAG is being built, but desktop/FORK_VERSION at that commit says $version."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          upstream="$(sed -nE 's/^  "version": "([^"]+)",$/\1/p' desktop/package.json)"
+          echo "Fork $version, carrying upstream $upstream, from $(git rev-parse HEAD)"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/dashboard/package-lock.json
+
+      # Same build settings as the fork's Windows release script, minus the pet
+      # page, which upstream only ships on Windows and Linux.
+      - name: Install dashboard dependencies
+        run: npm ci --prefix desktop/dashboard --no-audit --no-fund
+
+      - name: Build dashboard
+        working-directory: desktop
+        env:
+          VITE_APP_VERSION: ${{ steps.fork.outputs.version }}
+          VITE_RELEASE_REPO: ${{ env.FORK_RELEASE_REPO }}
+        run: npm run dashboard:build
+
+      - name: Cache Node.js binaries for EmbeddedServer
+        uses: actions/cache@v6
+        with:
+          path: /tmp/node-cache
+          key: fork-node-darwin-universal-22.22.2
+
+      - name: Bundle EmbeddedServer
+        env:
+          NODE_CACHE_DIR: /tmp/node-cache
+        run: bash desktop/TokenTrackerBar/scripts/bundle-node.sh
+
+      - name: Cache Homebrew bottles
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/Library/Caches/Homebrew/downloads
+            ~/Library/Caches/Homebrew/api
+          key: fork-homebrew-${{ runner.os }}-xcodegen-create-dmg
+
+      - name: Install xcodegen and create-dmg
+        run: brew install xcodegen create-dmg
+
+      - name: Generate Xcode project
+        working-directory: desktop/TokenTrackerBar
+        run: xcodegen generate
+
+      - name: Patch pbxproj for icon
+        working-directory: desktop/TokenTrackerBar
+        run: ruby scripts/patch-pbxproj-icon.rb
+
+      # MARKETING_VERSION on the command line outranks the value project.yml
+      # sets for both the app and the widget, so the Info.plist versions are the
+      # fork's without editing a file the upstream sync also changes.
+      - name: Build TokenTrackerBar
+        working-directory: desktop/TokenTrackerBar
+        env:
+          FORK_VERSION: ${{ steps.fork.outputs.version }}
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -scheme TokenTrackerBar \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            MARKETING_VERSION="$FORK_VERSION" \
+            OTHER_SWIFT_FLAGS="\$(inherited) -Xfrontend -solver-expression-time-threshold=120" \
+            clean build > build-xcodebuild.log 2>&1 || {
+              grep -E "error:|BUILD FAILED" build-xcodebuild.log | head -40
+              tail -60 build-xcodebuild.log
+              exit 1
+            }
+          tail -3 build-xcodebuild.log
+
+      - name: Check the built app
+        working-directory: desktop/TokenTrackerBar
+        env:
+          FORK_VERSION: ${{ steps.fork.outputs.version }}
+        run: |
+          set -euo pipefail
+          app="build/DerivedData/Build/Products/Release/TokenTracker.app"
+          fail() { echo "::error::$*" >&2; exit 1; }
+
+          # Fail loudly if the Intel slice is missing: Intel Macs would show a
+          # prohibited icon.
+          lipo -info "$app/Contents/MacOS/TokenTracker" | tee /dev/stderr
+          lipo -info "$app/Contents/MacOS/TokenTracker" | grep -q x86_64 || fail "app binary is not universal (no x86_64 slice)"
+          lipo -info "$app/Contents/Resources/EmbeddedServer/node" | grep -q x86_64 || fail "embedded Node is not universal (no x86_64 slice)"
+
+          for plist in "$app/Contents/Info.plist" "$app/Contents/PlugIns/TokenTrackerWidget.appex/Contents/Info.plist"; do
+            short="$(plutil -extract CFBundleShortVersionString raw "$plist")"
+            [ "$short" = "$FORK_VERSION" ] || fail "$(basename "$(dirname "$(dirname "$plist")")") reports version $short, expected $FORK_VERSION"
+          done
+          [ "$(plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist")" = "com.tokentracker.bar" ] || fail "unexpected bundle identifier"
+
+          # The fork's dashboard: it points at the fork's releases, carries the
+          # fork's version and still has the server-switch card.
+          assets="$app/Contents/Resources/EmbeddedServer/tokentracker/dashboard/dist/assets"
+          grep -rqF "$FORK_RELEASE_REPO" "$assets" || fail "dashboard does not point at $FORK_RELEASE_REPO"
+          grep -rqF "$FORK_VERSION" "$assets" || fail "dashboard does not carry version $FORK_VERSION"
+          LC_ALL=C grep -rq "云服务" "$assets" || fail "dashboard is missing the fork's server-switch card"
+
+      # Ad-hoc signing, inner to outer and without --deep. Without it Gatekeeper
+      # rejects a downloaded app as "damaged"; with it the user only sees
+      # "unidentified developer" and can right-click → Open. --deep would re-sign
+      # the widget with the host's entitlements and drop its app-sandbox key,
+      # which makes pkd refuse to load the widget.
+      - name: Ad-hoc sign app
+        working-directory: desktop/TokenTrackerBar
+        run: |
+          set -euo pipefail
+          app="$(pwd)/build/DerivedData/Build/Products/Release/TokenTracker.app"
+          appex="$app/Contents/PlugIns/TokenTrackerWidget.appex"
+
+          find "$app/Contents/Resources/EmbeddedServer" -type f \
+            \( -name 'node' -o -name '*.dylib' -o -name '*.so' -o -name '*.node' \) \
+            -exec codesign --force --timestamp=none --sign - {} \;
+
+          if [ -d "$appex" ]; then
+            codesign --force --timestamp=none \
+              --entitlements TokenTrackerWidget/TokenTrackerWidget.entitlements \
+              --sign - "$appex"
+          else
+            echo "::warning::Widget extension not found at $appex"
+          fi
+
+          codesign --force --timestamp=none \
+            --entitlements TokenTrackerBar/TokenTrackerBar.entitlements \
+            --sign - "$app"
+
+          codesign --verify --verbose=2 "$app"
+          if [ -d "$appex" ]; then
+            codesign -d --entitlements - "$appex" 2>&1 | tee /tmp/appex-ents.txt
+            grep -q "com.apple.security.app-sandbox" /tmp/appex-ents.txt || {
+              echo "::error::Widget extension lost com.apple.security.app-sandbox while signing"
+              exit 1
+            }
+          fi
+
+      - name: Create DMG
+        working-directory: desktop/TokenTrackerBar
+        run: |
+          set -euo pipefail
+          app="$(pwd)/build/DerivedData/Build/Products/Release/TokenTracker.app"
+          bash scripts/create-dmg.sh "$app"
+
+      # Check the finished DMG rather than the build tree: mount a copy, read the
+      # app the way a user gets it, and run the bundled server from there.
+      - name: Verify the DMG
+        env:
+          FORK_VERSION: ${{ steps.fork.outputs.version }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$*" >&2; exit 1; }
+          mkdir -p out
+          cp desktop/TokenTrackerBar/build/TokenTrackerBar.dmg out/
+          dmg="$RUNNER_TEMP/verify/TokenTrackerBar.dmg"
+          mkdir -p "$RUNNER_TEMP/verify"
+          cp out/TokenTrackerBar.dmg "$dmg"
+
+          mount="$RUNNER_TEMP/dmg-mount"
+          mkdir -p "$mount"
+          hdiutil verify "$dmg"
+          hdiutil attach "$dmg" -readonly -nobrowse -mountpoint "$mount" -quiet
+          app="$mount/TokenTracker.app"
+          detached=0
+          cleanup() {
+            [ "$detached" = 1 ] || hdiutil detach "$mount" -quiet -force || true
+            detached=1
+          }
+          trap cleanup EXIT
+
+          [ "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" = "$FORK_VERSION" ] || fail "app in the DMG does not report $FORK_VERSION"
+          codesign --verify --deep --strict "$app" || fail "app in the DMG fails codesign --verify"
+          spctl --assess --type execute "$app" 2>&1 | sed 's/^/spctl (expected to reject an ad-hoc signature): /' || true
+
+          # The server's first run installs notify hooks into every AI tool it
+          # finds under HOME, so it gets an empty home with a committed cursor
+          # store, which is what marks setup as already done.
+          home="$RUNNER_TEMP/smoke-home"
+          mkdir -p "$home/.tokentracker/tracker"
+          echo '{}' > "$home/.tokentracker/tracker/cursors.json"
+          server_root="$app/Contents/Resources/EmbeddedServer"
+          port=7689
+          set -m
+          HOME="$home" TOKENTRACKER_SKIP_OPENCLAW_CLI=1 NODE_ENV=production \
+            "$server_root/node" "$server_root/tokentracker/bin/tracker.js" serve --port $port --no-sync --no-open \
+            > "$RUNNER_TEMP/smoke.log" 2>&1 &
+          server=$!
+          ready=0
+          for _ in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:$port/" -o "$RUNNER_TEMP/smoke-index.html" 2>/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" != 1 ]; then cat "$RUNNER_TEMP/smoke.log"; fail "bundled server did not answer on port $port"; fi
+          grep -q "<title>Token Tracker" "$RUNNER_TEMP/smoke-index.html" || fail "bundled server did not serve the dashboard"
+          # The page lists its entry scripts; each must come back from the bundle.
+          scripts="$(sed -nE 's/.*<script[^>]*type="module"[^>]*src="([^"]+)".*/\1/p' "$RUNNER_TEMP/smoke-index.html")"
+          [ -n "$scripts" ] || fail "dashboard index lists no module script"
+          count=0
+          while IFS= read -r script; do
+            curl -fsS "http://127.0.0.1:$port$script" -o /dev/null || fail "bundled server did not serve $script"
+            count=$((count + 1))
+          done <<< "$scripts"
+          kill -- -$server 2>/dev/null || true
+          wait $server 2>/dev/null || true
+          set +m
+          echo "Bundled server answered from the DMG: index page and $count entry scripts."
+
+          cleanup
+          echo "Verified $(du -h "$dmg" | cut -f1) DMG: version $FORK_VERSION, signature intact, bundled server runs."
+
+      - name: Record build info
+        env:
+          FORK_VERSION: ${{ steps.fork.outputs.version }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          # Hashed before this file exists, so the list never includes a
+          # half-written copy of itself.
+          set -euo pipefail
+          sums="$(cd out && shasum -a 256 *)"
+          {
+            echo "fork version:     $FORK_VERSION"
+            echo "upstream version: $(node -p "require('./desktop/package.json').version")"
+            echo "tag: $TAG   commit: $(git rev-parse HEAD)"
+            echo "runner: $ImageOS-$ImageVersion ($(uname -m))   macOS: $(sw_vers -productVersion)   $(xcodebuild -version | head -1)"
+            echo "node (build): $(node --version)   embedded node: $(desktop/TokenTrackerBar/EmbeddedServer/node --version)"
+            echo "$sums"
+          } | tee out/BUILD-INFO.txt
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v7
+        with:
+          name: fork-${{ inputs.tag }}-macos
+          path: |
+            out/TokenTrackerBar.dmg
+            out/BUILD-INFO.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  # ───────────────────────────── Linux ─────────────────────────────
+  linux:
+    name: Linux packages (AppImage, deb, rpm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          persist-credentials: false
+
+      - name: Read the fork version from the tagged source
+        id: fork
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < desktop/FORK_VERSION)"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::desktop/FORK_VERSION is not x.y.z: '$version'"
+            exit 1
+          fi
+          if [[ "v$version" != "$TAG" ]]; then
+            echo "::error::$TAG is being built, but desktop/FORK_VERSION at that commit says $version."
+            exit 1
+          fi
+          # Upstream's nine version files must still agree with each other.
+          node desktop/scripts/validate-versions.cjs
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          upstream="$(sed -nE 's/^  "version": "([^"]+)",$/\1/p' desktop/package.json)"
+          echo "Fork $version, carrying upstream $upstream, from $(git rev-parse HEAD)"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            desktop/dashboard/package-lock.json
+            desktop/TokenTrackerLinux/package-lock.json
+
+      # webkit2gtk + gtk3 + libayatana-appindicator are what the tauri crate
+      # links against; librsvg rasterizes the icon; fuse3, rpm and cpio are for
+      # unpacking the finished packages in the verification step.
+      - name: Install Tauri build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            pkg-config \
+            desktop-file-utils \
+            file \
+            fuse3 \
+            rpm \
+            cpio
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/TokenTrackerLinux/src-tauri
+
+      - name: Install dashboard dependencies
+        run: npm ci --prefix desktop/dashboard --no-audit --no-fund
+
+      # Same build settings as the fork's Windows release script.
+      - name: Build dashboard
+        working-directory: desktop
+        env:
+          TOKENTRACKER_BUILD_PET: "1"
+          VITE_APP_VERSION: ${{ steps.fork.outputs.version }}
+          VITE_RELEASE_REPO: ${{ env.FORK_RELEASE_REPO }}
+        run: npm run dashboard:build
+
+      - name: Install Linux client dependencies
+        run: npm ci --prefix desktop/TokenTrackerLinux --no-audit --no-fund
+
+      # Stages the pinned Node binary plus bin/, src/ and dashboard/dist into
+      # TokenTrackerLinux/EmbeddedServer. tauri.bundle.conf.json declares that
+      # directory as a bundle resource, so tauri-build fails if it is missing.
+      - name: Bundle EmbeddedServer
+        working-directory: desktop/TokenTrackerLinux
+        run: npm run bundle:node
+
+      # The --config merge replaces only "version", in the merged config the
+      # bundler and the app read; Cargo.toml and tauri.conf.json keep upstream's
+      # number, which the upstream sync also changes.
+      - name: Build Linux packages
+        working-directory: desktop/TokenTrackerLinux
+        env:
+          FORK_VERSION: ${{ steps.fork.outputs.version }}
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/tauri build \
+            --config src-tauri/tauri.bundle.conf.json \
+            --config "{\"version\":\"$FORK_VERSION\"}" \
+            -- --locked > build-tauri.log 2>&1 || {
+              grep -E "error|Error|failed" build-tauri.log | head -40
+              tail -60 build-tauri.log
+              exit 1
+            }
+          tail -12 build-tauri.log
+
+      # Unpack every package and prove it carries a complete runtime, then run
+      # that runtime. The AppImage, .deb and .rpm are produced by separate
+      # bundlers and can fail independently. Checks on paths mirror upstream's
+      # release workflow; the version and fork-dashboard checks are ours.
+      - name: Verify and stage the Linux packages
+        env:
+          FORK_VERSION: ${{ steps.fork.outputs.version }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          bundle_root="desktop/TokenTrackerLinux/src-tauri/target/release/bundle"
+          mkdir -p dist-linux
+          workdir="$(mktemp -d)"
+          fail() { echo "::error::$*" >&2; exit 1; }
+
+          pick_one() {
+            local label="$1"; shift
+            local found=("$@")
+            if [ "${#found[@]}" -ne 1 ]; then
+              fail "expected exactly 1 $label, found ${#found[@]}: ${found[*]-none}"
+            fi
+            printf '%s' "${found[0]}"
+          }
+
+          # Locates the runtime by searching rather than hardcoding the resource
+          # directory name: Tauri derives it from productName.
+          embedded_server() {
+            local node_bin
+            node_bin="$(find "$1/usr/lib" -type f -name node -path '*/EmbeddedServer/*' -print -quit)"
+            [ -n "$node_bin" ] || fail "$2 carries no EmbeddedServer/node; the bundle.resources mapping did not apply"
+            [ -x "$node_bin" ] || fail "$2 bundled Node is not executable"
+            dirname "$node_bin"
+          }
+
+          verify_payload() {
+            local label="$1" root="$2" server required
+            [ -x "$root/usr/bin/tokentracker-linux" ] || fail "$label is missing usr/bin/tokentracker-linux"
+            file "$root/usr/bin/tokentracker-linux" | grep -Eq 'ELF 64-bit.*x86-64' || fail "$label binary is not a 64-bit x86-64 ELF"
+            server="$(embedded_server "$root" "$label")"
+            for required in \
+              "tokentracker/bin/tracker.js" \
+              "tokentracker/package.json" \
+              "tokentracker/dashboard/dist/index.html" \
+              "tokentracker/dashboard/dist/pet.html"
+            do
+              [ -e "$server/$required" ] || fail "$label is missing EmbeddedServer/$required"
+            done
+            # The fork's dashboard: it points at the fork's releases, carries
+            # the fork's version and still has the server-switch card.
+            grep -rqF "$FORK_RELEASE_REPO" "$server/tokentracker/dashboard/dist/assets" || fail "$label dashboard does not point at $FORK_RELEASE_REPO"
+            grep -rqF "$FORK_VERSION" "$server/tokentracker/dashboard/dist/assets" || fail "$label dashboard does not carry version $FORK_VERSION"
+            LC_ALL=C grep -rq "云服务" "$server/tokentracker/dashboard/dist/assets" || fail "$label dashboard is missing the fork's server-switch card"
+            echo "$label embedded runtime: ${server#"$root"}"
+          }
+
+          # The .deb and .rpm install the GNOME top-bar extension system-wide;
+          # the AppImage cannot put anything outside itself.
+          verify_gnome_extension() {
+            local dir="$2/usr/share/gnome-shell/extensions/tokentracker@tokentracker.cc" file
+            for file in metadata.json extension.js stylesheet.css; do
+              [ -f "$dir/$file" ] || fail "$1 is missing the GNOME extension's $file"
+            done
+          }
+
+          # The browser returns OAuth sign-in through tokentracker://. deb and rpm
+          # rely on their desktop entry for that.
+          verify_scheme_handler() {
+            local desktop="$2/usr/share/applications/TokenTracker.desktop"
+            [ -f "$desktop" ] || fail "$1 is missing usr/share/applications/TokenTracker.desktop"
+            grep -Fxq 'MimeType=x-scheme-handler/tokentracker;' "$desktop" || fail "$1 desktop entry does not register tokentracker://"
+            grep -Fxq 'Exec=tokentracker-linux %u' "$desktop" || fail "$1 desktop entry has an unexpected Exec line"
+          }
+
+          # --- AppImage -----------------------------------------------------
+          image="$(pick_one AppImage "$bundle_root"/appimage/*.AppImage)"
+          case "$(basename "$image")" in *"_$FORK_VERSION"_*) ;; *) fail "AppImage is not named after $FORK_VERSION: $image" ;; esac
+          cp "$image" "$workdir/app.AppImage"
+          chmod +x "$workdir/app.AppImage"
+          # Extract rather than mount so the check does not depend on FUSE.
+          (cd "$workdir" && ./app.AppImage --appimage-extract >/dev/null)
+          verify_payload "AppImage" "$workdir/squashfs-root"
+          cp "$image" "dist-linux/TokenTracker-linux-x86_64.AppImage"
+
+          # --- deb ----------------------------------------------------------
+          deb="$(pick_one deb "$bundle_root"/deb/*.deb)"
+          [ "$(dpkg-deb -f "$deb" Version)" = "$FORK_VERSION" ] || fail "deb version is $(dpkg-deb -f "$deb" Version), expected $FORK_VERSION"
+          mkdir -p "$workdir/deb"
+          dpkg-deb -x "$deb" "$workdir/deb"
+          verify_payload "deb" "$workdir/deb"
+          verify_gnome_extension "deb" "$workdir/deb"
+          verify_scheme_handler "deb" "$workdir/deb"
+          cp "$deb" "dist-linux/TokenTracker-linux-x86_64.deb"
+
+          # --- rpm ----------------------------------------------------------
+          rpm_pkg="$(pick_one rpm "$bundle_root"/rpm/*.rpm)"
+          [ "$(rpm -qp --qf '%{VERSION}' "$rpm_pkg")" = "$FORK_VERSION" ] || fail "rpm version is $(rpm -qp --qf '%{VERSION}' "$rpm_pkg"), expected $FORK_VERSION"
+          mkdir -p "$workdir/rpm"
+          # Some rpm2cpio/cpio combinations return a non-zero status after
+          # extracting the complete payload; verify_payload stays authoritative.
+          if ! (cd "$workdir/rpm" && rpm2cpio "$(realpath "$rpm_pkg")" | cpio -idm --quiet); then
+            echo "::warning::RPM extraction returned a non-zero status; checking the extracted payload"
+          fi
+          verify_payload "rpm" "$workdir/rpm"
+          verify_gnome_extension "rpm" "$workdir/rpm"
+          verify_scheme_handler "rpm" "$workdir/rpm"
+          cp "$rpm_pkg" "dist-linux/TokenTracker-linux-x86_64.rpm"
+
+          # --- the runtime from the .deb, running on this machine -------------
+          # The server's first run installs notify hooks into every AI tool it
+          # finds under HOME, so it gets an empty home with a committed cursor
+          # store, which is what marks setup as already done.
+          home="$RUNNER_TEMP/smoke-home"
+          mkdir -p "$home/.tokentracker/tracker"
+          echo '{}' > "$home/.tokentracker/tracker/cursors.json"
+          server_root="$(embedded_server "$workdir/deb" deb)"
+          port=7689
+          HOME="$home" TOKENTRACKER_SKIP_OPENCLAW_CLI=1 NODE_ENV=production \
+            "$server_root/node" "$server_root/tokentracker/bin/tracker.js" serve --port $port --no-sync --no-open \
+            > "$RUNNER_TEMP/smoke.log" 2>&1 &
+          server=$!
+          ready=0
+          for _ in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:$port/" -o "$RUNNER_TEMP/smoke-index.html" 2>/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" != 1 ]; then cat "$RUNNER_TEMP/smoke.log"; fail "bundled server did not answer on port $port"; fi
+          grep -q "<title>Token Tracker" "$RUNNER_TEMP/smoke-index.html" || fail "bundled server did not serve the dashboard"
+          # The page lists its entry scripts; each must come back from the bundle.
+          scripts="$(sed -nE 's/.*<script[^>]*type="module"[^>]*src="([^"]+)".*/\1/p' "$RUNNER_TEMP/smoke-index.html")"
+          [ -n "$scripts" ] || fail "dashboard index lists no module script"
+          count=0
+          while IFS= read -r script; do
+            curl -fsS "http://127.0.0.1:$port$script" -o /dev/null || fail "bundled server did not serve $script"
+            count=$((count + 1))
+          done <<< "$scripts"
+          curl -fsS "http://127.0.0.1:$port/pet.html" -o /dev/null || fail "bundled server did not serve pet.html"
+          kill "$server" 2>/dev/null || true
+          pkill -P "$server" 2>/dev/null || true
+          wait "$server" 2>/dev/null || true
+          echo "Bundled server answered from the .deb on $(lsb_release -ds 2>/dev/null || echo Linux): index page, $count entry scripts and pet.html."
+
+          rm -rf "$workdir"
+          ls -la dist-linux
+
+      - name: Record build info
+        env:
+          FORK_VERSION: ${{ steps.fork.outputs.version }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          # Hashed before this file exists, so the list never includes a
+          # half-written copy of itself.
+          set -euo pipefail
+          sums="$(cd dist-linux && sha256sum *)"
+          {
+            echo "fork version:     $FORK_VERSION"
+            echo "upstream version: $(node -p "require('./desktop/package.json').version")"
+            echo "tag: $TAG   commit: $(git rev-parse HEAD)"
+            echo "runner: $ImageOS-$ImageVersion   $(lsb_release -ds 2>/dev/null || uname -sr)   $(uname -m)"
+            echo "node (build): $(node --version)   rust: $(rustc --version)   tauri cli: $(desktop/TokenTrackerLinux/node_modules/.bin/tauri --version)"
+            echo "embedded node: $(desktop/TokenTrackerLinux/EmbeddedServer/node --version)"
+            echo "$sums"
+          } | tee dist-linux/BUILD-INFO.txt
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: fork-${{ inputs.tag }}-linux
+          path: |
+            dist-linux/TokenTracker-linux-x86_64.AppImage
+            dist-linux/TokenTracker-linux-x86_64.deb
+            dist-linux/TokenTracker-linux-x86_64.rpm
+            dist-linux/BUILD-INFO.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  # ───────────────────────────── tests ─────────────────────────────
+  # The fork's changes live in the dashboard and the Node package, which all
+  # three platforms share. These jobs run those suites on the two platforms the
+  # fork has no local test machine for. They never block the build jobs, so a
+  # flaky test costs a re-run, not a rebuild; read their conclusions separately.
+  tests-linux:
+    name: Linux test suites
+    if: ${{ inputs.run_tests }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          persist-credentials: false
+
+      - name: Read the fork version from the tagged source
+        id: fork
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < desktop/FORK_VERSION)"
+          [ "v$version" = "$TAG" ] || { echo "::error::$TAG is being tested, but desktop/FORK_VERSION says $version."; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # Node 24 as in upstream's CI: the package test suite strips TypeScript
+      # natively and exercises undici 8, which Node 20 cannot run.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            desktop/package-lock.json
+            desktop/dashboard/package-lock.json
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm ci --prefix dashboard --no-audit --no-fund
+
+      # Built the way the fork packages it. Several package tests assert that
+      # dashboard/dist exists and read what was built into it.
+      - name: Build dashboard
+        working-directory: desktop
+        env:
+          TOKENTRACKER_BUILD_PET: "1"
+          VITE_APP_VERSION: ${{ steps.fork.outputs.version }}
+          VITE_RELEASE_REPO: ${{ env.FORK_RELEASE_REPO }}
+        run: npm run dashboard:build
+
+      - name: Package test suite
+        timeout-minutes: 35
+        working-directory: desktop
+        run: npm test
+
+      - name: Dashboard test suite
+        timeout-minutes: 20
+        working-directory: desktop/dashboard
+        run: npm test
+
+      # The same validators as upstream's ci job.
+      - name: Validators
+        working-directory: desktop
+        run: |
+          set -euo pipefail
+          npm run validate:copy
+          npm run validate:locale
+          npm run validate:ui-hardcode
+          npm run validate:guardrails
+          npm run validate:versions
+          npm run validate:bot-frames
+          node --test test/architecture-guardrails.test.js
+
+  tests-macos:
+    name: macOS test suites
+    if: ${{ inputs.run_tests }}
+    runs-on: macos-26
+    timeout-minutes: 75
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          persist-credentials: false
+
+      - name: Read the fork version from the tagged source
+        id: fork
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < desktop/FORK_VERSION)"
+          [ "v$version" = "$TAG" ] || { echo "::error::$TAG is being tested, but desktop/FORK_VERSION says $version."; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            desktop/package-lock.json
+            desktop/dashboard/package-lock.json
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm ci --prefix dashboard --no-audit --no-fund
+
+      - name: Build dashboard
+        working-directory: desktop
+        env:
+          VITE_APP_VERSION: ${{ steps.fork.outputs.version }}
+          VITE_RELEASE_REPO: ${{ env.FORK_RELEASE_REPO }}
+        run: npm run dashboard:build
+
+      # The whole suite, not a hand-picked pair of files: host assumptions that
+      # only hold on GNU userland are invisible to the Linux job by construction.
+      - name: Package test suite
+        timeout-minutes: 35
+        working-directory: desktop
+        run: npm test
+
+      - name: Dashboard test suite
+        timeout-minutes: 20
+        working-directory: desktop/dashboard
+        run: npm test
+
+      - name: Validators
+        working-directory: desktop
+        run: |
+          set -euo pipefail
+          npm run validate:copy
+          npm run validate:locale
+          npm run validate:ui-hardcode
+          npm run validate:guardrails
+          npm run validate:versions
+          npm run validate:bot-frames
+          node --test test/architecture-guardrails.test.js
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: desktop/TokenTrackerBar
+        run: xcodegen generate
+
+      - name: Patch pbxproj for icon
+        working-directory: desktop/TokenTrackerBar
+        run: ruby scripts/patch-pbxproj-icon.rb
+
+      - name: macOS app unit tests
+        timeout-minutes: 30
+        working-directory: desktop/TokenTrackerBar
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -scheme TokenTrackerBarTests \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/TestDerivedData > build-xcodebuild-test.log 2>&1 || {
+              grep -E "error:|failed|TEST FAILED" build-xcodebuild-test.log | head -40
+              tail -60 build-xcodebuild-test.log
+              exit 1
+            }
+          grep -E "Executed [0-9]+ tests" build-xcodebuild-test.log | tail -2
