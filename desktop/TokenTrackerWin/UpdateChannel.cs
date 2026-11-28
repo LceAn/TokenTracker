@@ -1,5 +1,7 @@
 using System;
 using System.Globalization;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace TokenTrackerWin;
@@ -46,26 +48,60 @@ internal sealed record UpdateChannel(string Id, string OwnerRepo)
 }
 
 /// <summary>
-/// The release this build was installed from, read from the assembly's
-/// informational version. A fork build carries <c>x.y.z-fork.N</c>; anything
-/// else is an official build, which keeps upstream's update behaviour.
+/// The release this build was installed from, read from the assembly. A fork
+/// build is marked by its <see cref="ChannelMetadataKey"/> assembly metadata;
+/// an unmarked build is an official one, which keeps upstream's update
+/// behaviour. Builds from before the fork numbered its own releases carry an
+/// <c>x.y.z-fork.N</c> informational version instead, and are still recognised.
 /// </summary>
 internal sealed record InstalledRelease(UpdateChannel Channel, string Version, int? ForkRevision)
 {
+    /// <summary>Assembly metadata that names the channel a build belongs to.</summary>
+    internal const string ChannelMetadataKey = "TokenTrackerUpdateChannel";
+
     private static readonly Regex Shape = new(@"^(\d+\.\d+\.\d+)(-fork\.(\d+))?$", RegexOptions.CultureInvariant);
 
-    /// <summary>What the tray and Settings show: "1.5.28-fork.1" for a fork build, "1.5.28" otherwise.</summary>
+    /// <summary>
+    /// Whether this build predates the fork's own numbering. Until the fork's
+    /// 2.0.0 it published "1.5.29-fork.1": the upstream version plus a revision.
+    /// </summary>
+    public bool HasLegacyNumbering => ForkRevision is not null;
+
+    /// <summary>What the tray and Settings show: "2.0.0", or "1.5.29-fork.1" for a legacy fork build.</summary>
     public string DisplayVersion => ForkRevision is { } revision ? $"{Version}-fork.{revision}" : Version;
 
-    /// <param name="informationalVersion">The assembly's informational version, if any.</param>
-    /// <param name="fallbackVersion">Base version to use when it does not match either shape.</param>
-    public static InstalledRelease FromInformationalVersion(string? informationalVersion, string fallbackVersion)
+    /// <summary>Read the identity of the assembly that is running.</summary>
+    public static InstalledRelease FromAssembly(Assembly assembly, string fallbackVersion)
     {
-        // "1.5.28-fork.1+<commit>" -> drop the build metadata after '+'.
+        var channel = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(attribute => attribute.Key == ChannelMetadataKey)?.Value;
+        return FromInformationalVersion(
+            assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
+            fallbackVersion,
+            channel);
+    }
+
+    /// <param name="informationalVersion">The assembly's informational version, if any.</param>
+    /// <param name="fallbackVersion">Version to use when it does not match either shape.</param>
+    /// <param name="buildChannel">
+    /// Value of the assembly's <see cref="ChannelMetadataKey"/> metadata, if any: "fork" for a
+    /// fork build numbered by the fork itself.
+    /// </param>
+    public static InstalledRelease FromInformationalVersion(
+        string? informationalVersion, string fallbackVersion, string? buildChannel = null)
+    {
+        // "2.0.0+<commit>" -> drop the build metadata after '+'.
         var match = Shape.Match((informationalVersion ?? "").Split('+')[0]);
-        if (!match.Success) return new InstalledRelease(UpdateChannel.Official, fallbackVersion, null);
-        var revision = int.TryParse(match.Groups[3].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) ? (int?)parsed : null;
-        return new InstalledRelease(revision is null ? UpdateChannel.Official : UpdateChannel.Fork, match.Groups[1].Value, revision);
+        var revision = match.Success
+            && int.TryParse(match.Groups[3].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed)
+                ? (int?)parsed
+                : null;
+        var channel = revision is not null || buildChannel == UpdateChannel.Fork.Id
+            ? UpdateChannel.Fork
+            : UpdateChannel.Official;
+        // The marker decides the channel even when the version is unreadable, so
+        // a damaged fork build never quietly starts following the official one.
+        return new InstalledRelease(channel, match.Success ? match.Groups[1].Value : fallbackVersion, revision);
     }
 }
 
@@ -74,14 +110,25 @@ internal static class UpdateDecision
 {
     /// <param name="installed">The release this build came from.</param>
     /// <param name="channel">The channel the release was found in.</param>
-    /// <param name="version">The release's base version ("1.5.28").</param>
-    /// <param name="forkRevision">The release's fork revision, for a fork release.</param>
+    /// <param name="version">The release's version without a legacy fork suffix ("2.0.1", "1.5.34").</param>
+    /// <param name="forkRevision">The legacy fork revision, when the release carries one.</param>
     public static bool IsUpdate(InstalledRelease installed, UpdateChannel channel, string version, int? forkRevision)
     {
-        var order = UpdateChecker.CompareVersions(installed.Version, version);
-        if (order > 0) return false;                        // never offer an older base version
-        if (installed.Channel != channel) return true;      // the user chose to follow the other channel
-        if (order < 0) return true;
-        return forkRevision is { } latest && latest > (installed.ForkRevision ?? -1);
+        // The two channels number their releases independently (the fork from
+        // 2.0.0, upstream at 1.5.x), so their versions do not order against each
+        // other. A release from the other channel is offered because the user
+        // chose to follow that channel.
+        if (installed.Channel != channel) return true;
+
+        if (installed.ForkRevision is { } installedRevision)
+        {
+            // A build from before the fork numbered its own releases: every
+            // release published since is newer than it.
+            if (forkRevision is not { } latest) return true;
+            var legacyOrder = UpdateChecker.CompareVersions(installed.Version, version);
+            return legacyOrder < 0 || (legacyOrder == 0 && latest > installedRevision);
+        }
+
+        return UpdateChecker.CompareVersions(installed.Version, version) < 0;
     }
 }

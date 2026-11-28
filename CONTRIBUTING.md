@@ -107,17 +107,19 @@ dotnet test TokenTrackerWin.Tests/TokenTrackerWin.Tests.csproj -c Release
 
 ### 发布 Windows 版
 
-版本号是「上游版本 + `-fork.<修订号>`」，例如 `1.5.29-fork.1`。修订号记在 `desktop/FORK_REVISION`，每次发布加一。上游的版本号文件保持和上游一致，所以同步时不会在版本号上冲突。
+版本号由本分支自己编，写在 `desktop/FORK_VERSION`（`x.y.z`），从 `2.0.0` 起：修复升末位，加功能升中位，有不兼容的改动升首位。它和上游的版本号没有对应关系。上游的版本号文件原样保留，所以同步时不会在版本号上冲突；每次同步的提交标题和发布说明里写明基于上游哪个版本。
 
-先提交所有改动，把修订号加一，然后在 `desktop/` 下运行：
+分支的第一个版本 `1.5.29-fork.1` 用的是「上游版本 + `-fork.N`」的写法。更新器仍然认得它，并且把它之后的任何发布都视为更新。所以新的版本号必须保持在 `2.0.0` 或以上，发布脚本会检查这一点。
+
+先提交所有改动，改好 `FORK_VERSION`，然后在 `desktop/` 下运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File TokenTrackerWin\scripts\build-fork-release.ps1
 ```
 
-脚本会跑测试和校验、构建界面、打包 Node 运行时和 CLI、发布、生成压缩包、安装包和校验文件，放在 `TokenTrackerWin\installer\Output\<版本号>\`。它只负责构建，不打标签也不发布。需要本机装有 .NET 8 SDK 和 Inno Setup 6。
+脚本会跑测试和校验、构建界面、打包 Node 运行时和 CLI、发布、确认打出来的程序版本正确且带着分支的标识、生成压缩包、安装包和校验文件，放在 `TokenTrackerWin\installer\Output\<版本号>\`。它只负责构建，不打标签也不发布。需要本机装有 .NET 8 SDK 和 Inno Setup 6。
 
-之后的步骤：推送 `main` 和标签 `v<版本号>`，在 GitHub 上建 Release，上传三个文件，核对远端的摘要和本地一致后再发布。
+之后的步骤：推送 `main` 和标签 `v<版本号>`，在 GitHub 上建 Release，上传三个文件，核对远端的摘要和本地一致后再发布。发布说明里写清楚基于上游哪个版本。
 
 ---
 
@@ -226,14 +228,16 @@ The first sync after the restructure was v1.5.29 → v1.5.34 on 2026-11-28. All 
 
 ### Releasing the Windows build
 
-The version is "upstream version + `-fork.<revision>`", for example `1.5.29-fork.1`. The revision lives in `desktop/FORK_REVISION` and is bumped for each release. Upstream's version files stay identical to upstream, so a sync never conflicts on a version number.
+The fork numbers its releases itself. The version lives in `desktop/FORK_VERSION` (`x.y.z`) and starts at `2.0.0`: bump the last part for a fix, the middle part for a feature, and the first part for a change that is not backwards compatible. The numbers do not correspond to upstream's. Upstream's version files stay identical to upstream, so a sync never conflicts on a version number; the sync commit's title and the release notes name the upstream version a build carries.
 
-Commit everything, bump the revision, then run from `desktop/`:
+The fork's first release, `1.5.29-fork.1`, was numbered after upstream. The updater still recognises it and treats every release published since as an update. New versions therefore have to stay at `2.0.0` or above; the release script checks this.
+
+Commit everything, set `FORK_VERSION`, then run from `desktop/`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File TokenTrackerWin\scripts\build-fork-release.ps1
 ```
 
-The script runs the tests and validators, builds the dashboard, bundles the Node runtime and the CLI, publishes, and writes the zip, the installer and the checksums to `TokenTrackerWin\installer\Output\<version>\`. It only builds: it does not tag or publish. It needs the .NET 8 SDK and Inno Setup 6.
+The script runs the tests and validators, builds the dashboard, bundles the Node runtime and the CLI, publishes, confirms that the built app reports the right version and carries the fork's marker, and writes the zip, the installer and the checksums to `TokenTrackerWin\installer\Output\<version>\`. It only builds: it does not tag or publish. It needs the .NET 8 SDK and Inno Setup 6.
 
-Then: push `main` and the tag `v<version>`, create the GitHub Release, upload the three files, and publish only after the remote digests match the local ones.
+Then: push `main` and the tag `v<version>`, create the GitHub Release, upload the three files, and publish only after the remote digests match the local ones. The release notes name the upstream version the build is based on.

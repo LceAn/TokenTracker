@@ -16,14 +16,13 @@
 ;   Copy-Item TokenTrackerWin\EmbeddedServer  TokenTrackerWin\publish\EmbeddedServer
 ; ─────────────────────────────────────────────────────────────────────────
 
+; MyAppVersion is the version Windows shows for the installation (Add/Remove
+; Programs) and that names the installer file. Upstream passes its release
+; version; the community fork passes its own ("2.0.0"), which is also what the
+; app reports. Either way both installers share the AppId below, so they
+; replace each other in place whatever their versions.
 #ifndef MyAppVersion
   #define MyAppVersion "0.0.0"
-#endif
-
-; Optional suffix for a community-fork build (e.g. -fork.1). It only tags the
-; installer file name; the version registered with Windows stays numeric.
-#ifndef ForkLabel
-  #define ForkLabel ""
 #endif
 
 #define MyAppName "TokenTracker"
@@ -48,7 +47,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 SetupIconFile=..\assets\trayicon.ico
 OutputDir=Output
-OutputBaseFilename=TokenTracker-Setup-v{#MyAppVersion}{#ForkLabel}
+OutputBaseFilename=TokenTracker-Setup-v{#MyAppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern

@@ -4,8 +4,10 @@
 #   ... -SkipTests     # skip the test suites, when they were already run on this commit
 #
 # Mirrors .github/workflows/release-windows.yml, on the machine instead of CI,
-# and adds the fork's identity: the version comes from package.json plus the
-# revision in FORK_REVISION ("1.5.28" + "1" -> "1.5.28-fork.1").
+# and adds the fork's identity. The fork numbers its own releases: the version
+# is FORK_VERSION in the package root ("2.0.0"), independent of the upstream
+# version in package.json. The upstream version is only reported, so a build
+# can be traced to the upstream code it carries.
 #
 # Output, in TokenTrackerWin\installer\Output\<fork version>\:
 #   TokenTracker-Setup.exe    the per-user installer
@@ -66,13 +68,17 @@ $savedEnvironment = @{}
 try {
     # ── identity ──────────────────────────────────────────────────────
     Step 'Version'
-    $baseVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
-    if ($baseVersion -notmatch '^\d+\.\d+\.\d+$') { throw "package.json has no stable x.y.z version: $baseVersion" }
-    if (-not (Test-Path FORK_REVISION)) { throw 'FORK_REVISION is missing from desktop/ (the npm package root).' }
-    $forkRevision = (Get-Content FORK_REVISION -Raw).Trim()
-    if ($forkRevision -notmatch '^\d+$') { throw "FORK_REVISION must be a number, found '$forkRevision'." }
-    $forkVersion = "$baseVersion-fork.$forkRevision"
-    $forkLabel = "-fork.$forkRevision"
+    $upstreamVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+    if ($upstreamVersion -notmatch '^\d+\.\d+\.\d+$') { throw "package.json has no stable x.y.z version: $upstreamVersion" }
+    if (-not (Test-Path FORK_VERSION)) { throw 'FORK_VERSION is missing from desktop/ (the npm package root).' }
+    $forkVersion = (Get-Content FORK_VERSION -Raw).Trim()
+    if ($forkVersion -notmatch '^\d+\.\d+\.\d+$') { throw "FORK_VERSION must be a stable x.y.z such as 2.0.1, found '$forkVersion'." }
+    # The updater compares plain "x.y.z" numbers, and so does the installer, so
+    # the first own-numbered release has to sort above the fork's earlier
+    # "1.5.29-fork.1" line on its own.
+    if ([version]$forkVersion -le [version]'1.999.999') {
+        throw "FORK_VERSION must be at least 2.0.0: releases below that cannot be told from the fork's earlier '$upstreamVersion-fork.N' line. Found '$forkVersion'."
+    }
     $outDir = Join-Path $WinProjDir "installer\Output\$forkVersion"
 
     $sourceSha = & git rev-parse HEAD
@@ -82,8 +88,9 @@ try {
     if ($dirty) {
         throw "Working tree has uncommitted changes, so the build could not be traced to one commit. Commit or stash them first:`n$($dirty -join "`n")"
     }
-    Write-Host "Fork version : $forkVersion (upstream $baseVersion, revision $forkRevision)"
-    Write-Host "Source commit: $sourceSha"
+    Write-Host "Fork version    : $forkVersion"
+    Write-Host "Upstream version: $upstreamVersion (the code this build carries)"
+    Write-Host "Source commit   : $sourceSha"
 
     # ── tests ─────────────────────────────────────────────────────────
     if (-not $SkipTests) {
@@ -142,11 +149,20 @@ try {
 
     Step 'Package verification'
     Run node @('scripts/verify-windows-package.cjs', 'TokenTrackerWin/publish', (Join-Path $env:TEMP "tokentracker-win-package-$forkVersion.json"))
-    $productVersion = (Get-Item TokenTrackerWin/publish/TokenTracker.dll).VersionInfo.ProductVersion
-    if (-not $productVersion.StartsWith($forkVersion, [StringComparison]::Ordinal)) {
-        throw "The published app reports '$productVersion', expected it to start with '$forkVersion'."
+    # The app reads its version and its update channel off this assembly, so
+    # check both on the file that ships: the informational version, and the
+    # marker that makes the running app a fork build (its strings sit in the
+    # assembly's attribute blob as UTF-8).
+    $assemblyPath = Join-Path $RepoRoot 'TokenTrackerWin\publish\TokenTracker.dll'
+    $productVersion = (Get-Item $assemblyPath).VersionInfo.ProductVersion
+    if ($productVersion -notmatch ('^' + [regex]::Escape($forkVersion) + '(\+.*)?$')) {
+        throw "The published app reports '$productVersion', expected '$forkVersion' or '$forkVersion+<commit>'."
     }
-    Write-Host "App version resource: $productVersion"
+    $assemblyText = [System.Text.Encoding]::GetEncoding(28591).GetString([System.IO.File]::ReadAllBytes($assemblyPath))
+    if (-not $assemblyText.Contains('TokenTrackerUpdateChannel')) {
+        throw 'The published app does not carry the fork build marker (TokenTrackerUpdateChannel); it would behave as an official build.'
+    }
+    Write-Host "App version resource: $productVersion (marked as a fork build)"
 
     # ── release assets ────────────────────────────────────────────────
     Step 'Portable zip'
@@ -165,12 +181,12 @@ try {
     if (-not $iscc) { throw 'ISCC.exe (Inno Setup 6) was not found. Install Inno Setup or set INNO_SETUP_DIR.' }
     Push-Location $WinProjDir
     try {
-        # AppVersion stays numeric for Windows; the fork label only tags the file name.
-        Run $iscc @("/DMyAppVersion=$baseVersion", "/DForkLabel=$forkLabel", 'installer\TokenTracker.iss')
+        # Windows shows this version for the installation, and it names the installer.
+        Run $iscc @("/DMyAppVersion=$forkVersion", 'installer\TokenTracker.iss')
     } finally {
         Pop-Location
     }
-    $setupBuilt = Join-Path $WinProjDir "installer\Output\TokenTracker-Setup-v$baseVersion$forkLabel.exe"
+    $setupBuilt = Join-Path $WinProjDir "installer\Output\TokenTracker-Setup-v$forkVersion.exe"
     if (-not (Test-Path $setupBuilt)) { throw "The installer was not produced at $setupBuilt." }
     $setupPath = Join-Path $outDir 'TokenTracker-Setup.exe'
     Copy-Item $setupBuilt $setupPath -Force
@@ -185,6 +201,7 @@ try {
     # ── summary ───────────────────────────────────────────────────────
     Step "Built $forkVersion"
     Write-Host "Release tag: v$forkVersion"
+    Write-Host "Upstream version carried: $upstreamVersion"
     Write-Host "Assets in  : $outDir"
     Get-ChildItem $outDir -File | Sort-Object Name | ForEach-Object {
         Write-Host ("  {0,-28} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB))

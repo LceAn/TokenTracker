@@ -61,6 +61,7 @@ To pick a self-hosted instance in Settings you first need a server of your own. 
 
 - **Upstream is the baseline.** `main` = upstream `main` + the additions above.
 - **Synced from upstream once a week.** Each sync is one merge commit titled `chore(fork): sync upstream vX.Y.Z`, so the commit log shows which upstream version the fork includes.
+- **It numbers its own releases.** From `2.0.0` on the fork numbers its releases itself; the numbers do not correspond to upstream's. Each set of release notes names the upstream version it is based on.
 - **Changes stay in a form that can go back upstream.** Once upstream merges the matching PR, the next sync brings it in as upstream code and the fork stops carrying it separately.
 
 Step by step: [CONTRIBUTING.md](CONTRIBUTING.md).

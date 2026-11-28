@@ -21,10 +21,10 @@ internal sealed class UpdateReleaseClient(HttpClient http, Func<DateTimeOffset>?
     // One cooldown for both channels: the unauthenticated API limit is per client IP.
     private DateTimeOffset? _apiNotBefore;
 
-    /// <param name="Version">Version to show the user: "1.5.28", or "1.5.28-fork.1" for a fork release.</param>
+    /// <param name="Version">Version to show the user: "1.5.28", "2.0.0", or "1.5.29-fork.1" for a legacy fork release.</param>
     /// <param name="Channel">The channel the release was found in.</param>
-    /// <param name="BaseVersion">Upstream version the release is based on.</param>
-    /// <param name="ForkRevision">Fork revision, for a fork release.</param>
+    /// <param name="BaseVersion">Version compared against the installed one: the release's version without a legacy fork suffix.</param>
+    /// <param name="ForkRevision">Legacy fork revision, when the release carries one.</param>
     internal readonly record struct ReleaseInfo(
         string Version, string SetupUrl, long SetupSize, string? ChecksumsUrl,
         UpdateChannel Channel, string BaseVersion, int? ForkRevision);
@@ -166,9 +166,10 @@ internal sealed class UpdateReleaseClient(HttpClient http, Func<DateTimeOffset>?
         => response.Headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;
 
     /// <summary>
-    /// Official releases are tagged <c>vX.Y.Z</c>. Fork releases carry a
-    /// <c>-fork.N</c> suffix, and the fork channel refuses tags without one so a
-    /// release can always be told apart from an official one.
+    /// Official releases are tagged <c>vX.Y.Z</c>. The fork numbers its releases
+    /// the same way, starting at <c>v2.0.0</c>. Its single earlier release was
+    /// tagged with the upstream version plus a <c>-fork.N</c> suffix, which is
+    /// still accepted so the fallback keeps working for it.
     /// </summary>
     private static (string BaseVersion, int? ForkRevision) ParseTag(string tag, UpdateChannel channel)
     {
@@ -178,11 +179,14 @@ internal sealed class UpdateReleaseClient(HttpClient http, Func<DateTimeOffset>?
         {
             const string suffix = "-fork.";
             var at = version.LastIndexOf(suffix, StringComparison.Ordinal);
-            var digits = at < 0 ? "" : version[(at + suffix.Length)..];
-            if (digits.Length is 0 or > 9 || digits[0] == '0' || !digits.All(char.IsAsciiDigit))
-                throw new InvalidDataException("The release tag is not a stable fork version.");
-            forkRevision = int.Parse(digits, CultureInfo.InvariantCulture);
-            version = version[..at];
+            if (at >= 0)
+            {
+                var digits = version[(at + suffix.Length)..];
+                if (digits.Length is 0 or > 9 || digits[0] == '0' || !digits.All(char.IsAsciiDigit))
+                    throw new InvalidDataException("The release tag is not a stable fork version.");
+                forkRevision = int.Parse(digits, CultureInfo.InvariantCulture);
+                version = version[..at];
+            }
         }
         if (!Version.TryParse(version, out var parsed) || parsed.Build < 0 || parsed.Revision >= 0)
             throw new InvalidDataException("The release tag is not a stable three-part version.");

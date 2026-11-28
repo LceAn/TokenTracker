@@ -44,7 +44,7 @@ const FORK_SETTINGS = {
   updateChannel: "fork",
   updateBusy: false,
   isSyncing: false,
-  version: "1.5.28-fork.1",
+  version: "2.0.0",
 };
 
 const CHANNEL_LABEL = "settings.menubar.updateChannel";
@@ -133,7 +133,7 @@ describe("MenuBarSection update channel", () => {
     renderFooter();
 
     expect(
-      screen.getByText('settings.menubar.updates.footerCore:{"version":"1.5.28-fork.1"}'),
+      screen.getByText('settings.menubar.updates.footerCore:{"version":"2.0.0"}'),
     ).toBeInTheDocument();
   });
 });
@@ -154,7 +154,7 @@ describe("NativeAppFooter check for updates without the native app", () => {
     showToast.mockReset();
     fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubEnv("VITE_APP_VERSION", "1.5.28-fork.1");
+    vi.stubEnv("VITE_APP_VERSION", "2.0.0");
     user = userEvent.setup();
   });
 
@@ -171,7 +171,7 @@ describe("NativeAppFooter check for updates without the native app", () => {
   };
 
   it("checks the official repository unless the build says otherwise", async () => {
-    fetchMock.mockResolvedValue(release("v1.5.28-fork.1", "https://github.com/xiufengsun/TokenTracker/releases/tag/v1.5.28"));
+    fetchMock.mockResolvedValue(release("v1.5.34", "https://github.com/xiufengsun/TokenTracker/releases/tag/v1.5.34"));
 
     await check();
 
@@ -180,26 +180,29 @@ describe("NativeAppFooter check for updates without the native app", () => {
     );
   });
 
-  it("offers a newer fork revision", async () => {
-    fetchMock.mockResolvedValue(release("v1.5.28-fork.2"));
+  it("offers a newer fork release", async () => {
+    fetchMock.mockResolvedValue(release("v2.0.1"));
 
     await check();
 
     expect(await screen.findByRole("dialog")).toHaveTextContent(
-      'settings.menubar.updates.modalDescription:{"version":"v1.5.28-fork.2"}',
+      'settings.menubar.updates.modalDescription:{"version":"v2.0.1"}',
     );
     expect(showToast).not.toHaveBeenCalled();
   });
 
-  it("offers a release on a newer upstream base", async () => {
-    fetchMock.mockResolvedValue(release("v1.5.29-fork.1"));
+  it("offers the fork's own numbering to the fork's first release", async () => {
+    // 1.5.29-fork.1 carried the upstream version plus a revision, before the fork started at 2.0.0.
+    vi.stubEnv("VITE_APP_VERSION", "1.5.29-fork.1");
+    fetchMock.mockResolvedValue(release("v2.0.0"));
 
     await check();
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(showToast).not.toHaveBeenCalled();
   });
 
-  it.each(["v1.5.28-fork.1", "v1.5.28-fork.0", "v1.5.27-fork.9"])(
+  it.each(["v2.0.0", "v1.9.9", "v1.5.29-fork.2"])(
     "stays quiet when the fork release %s is not newer",
     async (tag) => {
       fetchMock.mockResolvedValue(release(tag));
@@ -223,7 +226,7 @@ describe("NativeAppFooter check for updates without the native app", () => {
   it("checks the fork repository when the build points at it", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_RELEASE_REPO", "LceAn/TokenTracker");
-    fetchMock.mockResolvedValue(release("v1.5.28-fork.2"));
+    fetchMock.mockResolvedValue(release("v2.0.1"));
     const { NativeAppFooter: ForkFooter } = await import("./MenuBarSection.jsx");
 
     renderFooter(ForkFooter);

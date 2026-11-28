@@ -73,9 +73,7 @@ internal sealed class UpdateChecker
     public UpdateChecker(HttpClient? releaseHttp = null, Func<InstalledRelease, UpdateChannel>? channel = null, InstalledRelease? installed = null)
     {
         _releaseClient = new(releaseHttp ?? Http);
-        _installed = installed ?? InstalledRelease.FromInformationalVersion(
-            Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
-            ResolveCurrentVersion());
+        _installed = installed ?? InstalledRelease.FromAssembly(Assembly.GetExecutingAssembly(), ResolveCurrentVersion());
         _channel = channel ?? (build => build.Channel);
     }
 
@@ -84,10 +82,14 @@ internal sealed class UpdateChecker
     private string? _checksumsUrl;
     private UpdateChannel? _pendingChannel;
 
-    /// <summary>Upstream version of this build ("1.5.28"), without the fork suffix.</summary>
+    /// <summary>
+    /// The version this build is compared against releases with: the fork's own
+    /// number for a fork build ("2.0.0"), upstream's for an official one. A
+    /// legacy fork build ("1.5.28-fork.1") reports its upstream part here.
+    /// </summary>
     public string CurrentVersion => _installed.Version;
 
-    /// <summary>Version to show the user: "1.5.28-fork.1" for a fork build, otherwise <see cref="CurrentVersion"/>.</summary>
+    /// <summary>Version to show the user. Differs from <see cref="CurrentVersion"/> only on a legacy fork build.</summary>
     public string DisplayVersion => _installed.DisplayVersion;
 
     /// <summary>The channel the next check follows.</summary>

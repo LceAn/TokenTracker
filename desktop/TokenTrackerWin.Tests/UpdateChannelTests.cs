@@ -1,3 +1,6 @@
+using System.IO;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -8,14 +11,17 @@ namespace TokenTrackerWin.Tests;
 
 public sealed class UpdateChannelTests
 {
-    private static readonly InstalledRelease ForkBuild = new(UpdateChannel.Fork, "1.5.28", 1);
+    // A fork build numbered by the fork itself.
+    private static readonly InstalledRelease ForkBuild = new(UpdateChannel.Fork, "2.0.0", null);
+    // The fork's first release, numbered after upstream before the fork started its own numbering.
+    private static readonly InstalledRelease LegacyForkBuild = new(UpdateChannel.Fork, "1.5.29", 1);
     private static readonly InstalledRelease OfficialBuild = new(UpdateChannel.Official, "1.5.28", null);
 
     private const string ForkApi = "https://api.github.com/repos/LceAn/TokenTracker/releases/latest";
     private const string ForkPage = "https://github.com/LceAn/TokenTracker/releases/latest";
-    private const string ForkTagPage = "https://github.com/LceAn/TokenTracker/releases/tag/v1.5.28-fork.2";
+    private const string ForkTagPage = "https://github.com/LceAn/TokenTracker/releases/tag/v2.0.1";
     private const string OfficialApi = "https://api.github.com/repos/xiufengsun/TokenTracker/releases/latest";
-    private const string ForkDownloads = "https://github.com/LceAn/TokenTracker/releases/download/v1.5.28-fork.2/";
+    private const string ForkDownloads = "https://github.com/LceAn/TokenTracker/releases/download/v2.0.1/";
     private const string OfficialDownloads = "https://github.com/xiufengsun/TokenTracker/releases/download/v1.5.28/";
 
     // ── identity ───────────────────────────────────────────────────────
@@ -34,19 +40,24 @@ public sealed class UpdateChannelTests
     }
 
     [Theory]
-    [InlineData("1.5.28-fork.1+abc123", true, "1.5.28", 1, "1.5.28-fork.1")]
-    [InlineData("1.5.28-fork.12", true, "1.5.28", 12, "1.5.28-fork.12")]
-    [InlineData("1.5.28+abc123", false, "1.5.28", null, "1.5.28")]
-    [InlineData("1.0.0", false, "1.0.0", null, "1.0.0")]
+    [InlineData("2.0.0+abc123", "fork", true, "2.0.0", null, "2.0.0")]
+    [InlineData("2.0.0", "fork", true, "2.0.0", null, "2.0.0")]
+    [InlineData("2.0.0+abc123", null, false, "2.0.0", null, "2.0.0")]          // unmarked: an official build that shares the number
+    [InlineData("2.0.0+abc123", "official", false, "2.0.0", null, "2.0.0")]
+    [InlineData("1.5.29-fork.1+abc123", null, true, "1.5.29", 1, "1.5.29-fork.1")]  // the fork's first release
+    [InlineData("1.5.29-fork.12", "fork", true, "1.5.29", 12, "1.5.29-fork.12")]
+    [InlineData("1.5.28+abc123", null, false, "1.5.28", null, "1.5.28")]
+    [InlineData("1.0.0", null, false, "1.0.0", null, "1.0.0")]
     public void InformationalVersionCarriesTheChannelAndRevision(
-        string informationalVersion, bool isFork, string version, int? revision, string display)
+        string informationalVersion, string? buildChannel, bool isFork, string version, int? revision, string display)
     {
-        var installed = InstalledRelease.FromInformationalVersion(informationalVersion, "9.9.9");
+        var installed = InstalledRelease.FromInformationalVersion(informationalVersion, "9.9.9", buildChannel);
 
         Assert.Equal(isFork ? UpdateChannel.Fork : UpdateChannel.Official, installed.Channel);
         Assert.Equal(version, installed.Version);
         Assert.Equal(revision, installed.ForkRevision);
         Assert.Equal(display, installed.DisplayVersion);
+        Assert.Equal(revision is not null, installed.HasLegacyNumbering);
     }
 
     [Theory]
@@ -54,25 +65,60 @@ public sealed class UpdateChannelTests
     [InlineData("")]
     [InlineData("garbage")]
     [InlineData("1.5")]
-    public void UnrecognizedInformationalVersionIsAnOfficialBuildOnTheFallbackVersion(string? informationalVersion)
+    public void AnUnreadableVersionFallsBackToTheFallbackVersion(string? informationalVersion)
     {
-        var installed = InstalledRelease.FromInformationalVersion(informationalVersion, "9.9.9");
+        var unmarked = InstalledRelease.FromInformationalVersion(informationalVersion, "9.9.9");
+        var marked = InstalledRelease.FromInformationalVersion(informationalVersion, "9.9.9", "fork");
+
+        Assert.Equal(UpdateChannel.Official, unmarked.Channel);
+        Assert.Equal(UpdateChannel.Fork, marked.Channel);   // the marker still decides the channel
+        Assert.Equal("9.9.9", unmarked.Version);
+        Assert.Equal("9.9.9", marked.Version);
+        Assert.Null(marked.ForkRevision);
+    }
+
+    [Theory]
+    [InlineData("2.0.0+abc123", "fork", true, "2.0.0")]
+    [InlineData("2.0.0+abc123", null, false, "2.0.0")]     // unmarked: an official build that shares the number
+    [InlineData("1.5.29-fork.1+abc123", null, true, "1.5.29")]
+    public void TheChannelIsReadFromTheAssemblyAttributes(string informationalVersion, string? channel, bool isFork, string version)
+    {
+        // The test assembly itself must stay unmarked: upstream's tests construct
+        // UpdateChecker from it and expect an official build.
+        var probe = MarkedAssembly(informationalVersion, channel);
+
+        var installed = InstalledRelease.FromAssembly(probe, "9.9.9");
+
+        Assert.Equal(isFork ? UpdateChannel.Fork : UpdateChannel.Official, installed.Channel);
+        Assert.Equal(version, installed.Version);
+    }
+
+    [Fact]
+    public void TheForkBuildWritesTheMarkerTheRunningAppLooksFor()
+    {
+        var props = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "TokenTrackerWin", "ForkBuild.props"));
+
+        Assert.Contains($@"Include=""{InstalledRelease.ChannelMetadataKey}"" Value=""{UpdateChannel.Fork.Id}""", props);
+    }
+
+    [Fact]
+    public void AnAssemblyWithoutTheMarkerIsAnOfficialBuild()
+    {
+        var installed = InstalledRelease.FromAssembly(typeof(object).Assembly, "9.9.9");
 
         Assert.Equal(UpdateChannel.Official, installed.Channel);
-        Assert.Equal("9.9.9", installed.Version);
         Assert.Null(installed.ForkRevision);
+        Assert.False(installed.HasLegacyNumbering);
     }
 
     // ── decision ───────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(true, "1.5.28", 2, true)]        // new fork revision
-    [InlineData(true, "1.5.28", 1, false)]       // this very release
-    [InlineData(true, "1.5.29", 1, true)]        // new upstream base
-    [InlineData(true, "1.5.27", 9, false)]       // an older base is never an update
-    [InlineData(false, "1.5.28", null, true)]    // other channel, same base
-    [InlineData(false, "1.5.29", null, true)]    // other channel, newer base
-    [InlineData(false, "1.5.27", null, false)]   // other channel, but older
+    [InlineData(true, "2.0.1", null, true)]        // a newer fork release
+    [InlineData(true, "2.0.0", null, false)]       // this very release
+    [InlineData(true, "1.9.9", null, false)]       // an older fork release is never an update
+    [InlineData(false, "1.5.34", null, true)]      // the other channel is offered whatever its number
+    [InlineData(false, "1.5.27", null, true)]
     public void AForkBuildIsOfferedNewerReleasesAndTheChosenChannelSwitches(
         bool releaseIsFork, string version, int? revision, bool expected)
     {
@@ -81,14 +127,24 @@ public sealed class UpdateChannelTests
         Assert.Equal(expected, UpdateDecision.IsUpdate(ForkBuild, channel, version, revision));
     }
 
-    [Fact]
-    public void AnOlderForkReleaseIsNotOfferedToANewerOfficialBuild()
+    [Theory]
+    [InlineData("2.0.0", null, true)]        // the fork's own numbering: newer than every legacy release
+    [InlineData("1.5.30", 1, true)]          // a newer upstream base
+    [InlineData("1.5.29", 2, true)]          // a higher revision of the same base
+    [InlineData("1.5.29", 1, false)]         // this very release
+    [InlineData("1.5.28", 9, false)]         // an older base is never an update
+    public void TheForksFirstReleaseIsOfferedEverythingPublishedSince(string version, int? revision, bool expected)
     {
-        var newerOfficial = new InstalledRelease(UpdateChannel.Official, "1.5.30", null);
+        Assert.Equal(expected, UpdateDecision.IsUpdate(LegacyForkBuild, UpdateChannel.Fork, version, revision));
+    }
 
-        Assert.False(UpdateDecision.IsUpdate(newerOfficial, UpdateChannel.Fork, "1.5.28", 1));
-        Assert.False(UpdateDecision.IsUpdate(newerOfficial, UpdateChannel.Official, "1.5.30", null));
-        Assert.True(UpdateDecision.IsUpdate(newerOfficial, UpdateChannel.Official, "1.5.31", null));
+    [Theory]
+    [InlineData("1.5.29", true)]
+    [InlineData("1.5.28", false)]
+    [InlineData("1.5.27", false)]
+    public void AnOfficialBuildIsOfferedNewerOfficialReleases(string version, bool expected)
+    {
+        Assert.Equal(expected, UpdateDecision.IsUpdate(OfficialBuild, UpdateChannel.Official, version, null));
     }
 
     // ── persisted choice ───────────────────────────────────────────────
@@ -123,7 +179,7 @@ public sealed class UpdateChannelTests
         using var http = Http(request =>
         {
             calls.Add(request.RequestUri!.AbsoluteUri);
-            return ApiRelease("v1.5.28-fork.2", ForkDownloads);
+            return ApiRelease("v2.0.1", ForkDownloads);
         });
         var resolver = new UpdateReleaseClient(http);
 
@@ -131,11 +187,24 @@ public sealed class UpdateChannelTests
 
         Assert.Equal([ForkApi], calls);
         Assert.Equal(UpdateChannel.Fork, release.Channel);
-        Assert.Equal("1.5.28", release.BaseVersion);
-        Assert.Equal(2, release.ForkRevision);
-        Assert.Equal("1.5.28-fork.2", release.Version);
+        Assert.Equal("2.0.1", release.BaseVersion);
+        Assert.Null(release.ForkRevision);
+        Assert.Equal("2.0.1", release.Version);
         Assert.Equal(ForkDownloads + "TokenTracker-Setup.exe", release.SetupUrl);
         Assert.Equal(ForkDownloads + "SHA256SUMS", release.ChecksumsUrl);
+    }
+
+    [Fact]
+    public async Task ForkChannelStillParsesTheTagOfTheForksFirstRelease()
+    {
+        using var http = Http(_ => ApiRelease("v1.5.29-fork.1", "https://github.com/LceAn/TokenTracker/releases/download/v1.5.29-fork.1/"));
+        var resolver = new UpdateReleaseClient(http);
+
+        var release = await resolver.FetchLatestAsync(UpdateChannel.Fork, CancellationToken.None);
+
+        Assert.Equal("1.5.29", release.BaseVersion);
+        Assert.Equal(1, release.ForkRevision);
+        Assert.Equal("1.5.29-fork.1", release.Version);
     }
 
     [Fact]
@@ -152,7 +221,7 @@ public sealed class UpdateChannelTests
         var release = await resolver.FetchLatestAsync(UpdateChannel.Fork, CancellationToken.None);
 
         Assert.True(resolver.UsedFallback);
-        Assert.Equal("1.5.28-fork.2", release.Version);
+        Assert.Equal("2.0.1", release.Version);
         Assert.Equal(ForkDownloads + "TokenTracker-Setup.exe", release.SetupUrl);
         Assert.Equal(ForkDownloads + "SHA256SUMS", release.ChecksumsUrl);
         Assert.Equal(new[] {
@@ -164,13 +233,13 @@ public sealed class UpdateChannelTests
     }
 
     [Theory]
-    [InlineData("v1.5.28")]            // no fork suffix: an official tag
-    [InlineData("v1.5.28-rc.1")]
-    [InlineData("v1.5.28-fork.01")]
-    [InlineData("v1.5.28-fork.x")]
-    [InlineData("v1.5.28-fork.")]
-    [InlineData("v1.5.28-fork.1-rc.1")]
-    public async Task ForkChannelRefusesTagsThatAreNotStableForkReleases(string tag)
+    [InlineData("v2.0")]               // two parts
+    [InlineData("v2.0.0-rc.1")]
+    [InlineData("v2.0.0-fork.01")]
+    [InlineData("v2.0.0-fork.x")]
+    [InlineData("v2.0.0-fork.")]
+    [InlineData("v2.0.0-fork.1-rc.1")]
+    public async Task ForkChannelRefusesTagsThatAreNotStableReleases(string tag)
     {
         using var http = Http(_ => ApiRelease(tag, ForkDownloads));
         var resolver = new UpdateReleaseClient(http);
@@ -194,7 +263,7 @@ public sealed class UpdateChannelTests
     {
         using var http = Http(request => request.RequestUri!.AbsoluteUri == ForkApi
             ? RateLimited()
-            : PageRedirect("https://github.com/xiufengsun/TokenTracker/releases/tag/v1.5.28-fork.1"));
+            : PageRedirect("https://github.com/xiufengsun/TokenTracker/releases/tag/v2.0.1"));
         var resolver = new UpdateReleaseClient(http);
 
         await Assert.ThrowsAsync<InvalidDataException>(
@@ -204,32 +273,32 @@ public sealed class UpdateChannelTests
     // ── the checker ────────────────────────────────────────────────────
 
     [Fact]
-    public async Task AForkBuildFollowsTheForkByDefaultAndReportsItsForkVersion()
+    public async Task AForkBuildFollowsTheForkByDefaultAndReportsItsOwnVersion()
     {
         var calls = new List<string>();
         using var http = Http(request =>
         {
             calls.Add(request.RequestUri!.AbsoluteUri);
-            return ApiRelease("v1.5.28-fork.2", ForkDownloads);
+            return ApiRelease("v2.0.1", ForkDownloads);
         });
         var checker = new UpdateChecker(http, installed: ForkBuild);
 
         Assert.Equal(UpdateChannel.Fork, checker.Channel);
-        Assert.Equal("1.5.28-fork.1", checker.DisplayVersion);
-        Assert.Equal("1.5.28", checker.CurrentVersion);
+        Assert.Equal("2.0.0", checker.DisplayVersion);
+        Assert.Equal("2.0.0", checker.CurrentVersion);
         Assert.True(checker.CanChooseChannel);
         Assert.Equal(UpdateChannel.Fork.ReleasePageUrl, checker.ReleasePageUrl);
         Assert.Equal(UpdateChecker.CheckOutcome.UpdateAvailable, await checker.CheckAsync(silent: false));
 
         Assert.Equal([ForkApi], calls);
-        Assert.Equal("1.5.28-fork.2", checker.LatestVersion);
+        Assert.Equal("2.0.1", checker.LatestVersion);
         Assert.False(checker.PendingReleaseCrossesChannels);
     }
 
     [Fact]
     public async Task AForkBuildIsUpToDateOnItsOwnRelease()
     {
-        using var http = Http(_ => ApiRelease("v1.5.28-fork.1", ForkDownloads));
+        using var http = Http(_ => ApiRelease("v2.0.0", ForkDownloads));
         var checker = new UpdateChecker(http, installed: ForkBuild);
 
         Assert.Equal(UpdateChecker.CheckOutcome.UpToDate, await checker.CheckAsync(silent: false));
@@ -238,7 +307,20 @@ public sealed class UpdateChannelTests
     }
 
     [Fact]
-    public async Task ChoosingTheOfficialChannelOffersTheOfficialReleaseOfTheSameBaseVersion()
+    public async Task TheForksFirstReleaseIsOfferedTheFirstReleaseOfTheForksOwnNumbering()
+    {
+        using var http = Http(_ => ApiRelease("v2.0.0", ForkDownloads));
+        var checker = new UpdateChecker(http, installed: LegacyForkBuild);
+
+        Assert.Equal("1.5.29-fork.1", checker.DisplayVersion);
+        Assert.Equal(UpdateChecker.CheckOutcome.UpdateAvailable, await checker.CheckAsync(silent: false));
+
+        Assert.Equal("2.0.0", checker.LatestVersion);
+        Assert.False(checker.PendingReleaseCrossesChannels);
+    }
+
+    [Fact]
+    public async Task ChoosingTheOfficialChannelOffersTheOfficialReleaseWhateverItsNumber()
     {
         var calls = new List<string>();
         using var http = Http(request =>
@@ -258,20 +340,10 @@ public sealed class UpdateChannelTests
     }
 
     [Fact]
-    public async Task ChoosingTheOfficialChannelDoesNotOfferAnOlderOfficialRelease()
-    {
-        using var http = Http(_ => ApiRelease("v1.5.27", "https://github.com/xiufengsun/TokenTracker/releases/download/v1.5.27/"));
-        var checker = new UpdateChecker(http, _ => UpdateChannel.Official, ForkBuild);
-
-        Assert.Equal(UpdateChecker.CheckOutcome.UpToDate, await checker.CheckAsync(silent: false));
-        Assert.False(checker.PendingReleaseCrossesChannels);
-    }
-
-    [Fact]
     public async Task ResetLetsASwitchedChannelBeReEvaluated()
     {
         using var http = Http(request => request.RequestUri!.AbsoluteUri == ForkApi
-            ? ApiRelease("v1.5.28-fork.1", ForkDownloads)
+            ? ApiRelease("v2.0.0", ForkDownloads)
             : ApiRelease("v1.5.28", OfficialDownloads));
         var channel = UpdateChannel.Fork;
         var checker = new UpdateChecker(http, _ => channel, ForkBuild);
@@ -322,7 +394,7 @@ public sealed class UpdateChannelTests
 
         Assert.False(checker.Reset());
 
-        response.SetResult(ApiRelease("v1.5.28-fork.2", ForkDownloads));
+        response.SetResult(ApiRelease("v2.0.1", ForkDownloads));
         Assert.Equal(UpdateChecker.CheckOutcome.UpdateAvailable, await check);
     }
 
@@ -338,6 +410,24 @@ public sealed class UpdateChannelTests
     }
 
     // ── helpers ────────────────────────────────────────────────────────
+
+    // An in-memory assembly that carries the attributes a build gets, so the
+    // reader is exercised against real attributes.
+    private static Assembly MarkedAssembly(string informationalVersion, string? channel)
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName("TokenTracker.Tests.BuildProbe"), AssemblyBuilderAccess.Run);
+        if (channel is not null)
+        {
+            assembly.SetCustomAttribute(new CustomAttributeBuilder(
+                typeof(AssemblyMetadataAttribute).GetConstructor(new[] { typeof(string), typeof(string) })!,
+                new object[] { InstalledRelease.ChannelMetadataKey, channel }));
+        }
+        assembly.SetCustomAttribute(new CustomAttributeBuilder(
+            typeof(AssemblyInformationalVersionAttribute).GetConstructor(new[] { typeof(string) })!,
+            new object[] { informationalVersion }));
+        return assembly;
+    }
 
     private static HttpResponseMessage ApiRelease(string tag, string downloadBase)
         => new(HttpStatusCode.OK) { Content = new StringContent(JsonSerializer.Serialize(new {

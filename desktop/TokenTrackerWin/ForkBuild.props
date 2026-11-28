@@ -1,12 +1,22 @@
 <Project>
   <!-- Community-fork build identity, imported by TokenTrackerWin.csproj.
        The version files upstream keeps in sync stay untouched, so a weekly
-       upstream merge never conflicts on a version number. The fork revision
-       lives in FORK_REVISION and turns "1.5.28" into "1.5.28-fork.1", which is
-       where UpdateChecker reads the build's update channel and revision from. -->
+       upstream merge never conflicts on a version number. The fork numbers its
+       own releases: FORK_VERSION holds "2.0.0", which becomes the assembly's
+       informational version ("2.0.0+<commit>") and is what the tray, Settings
+       and the installer show. The TokenTrackerUpdateChannel metadata marks the
+       assembly as a fork build, which is where UpdateChecker reads the build's
+       update channel from. -->
   <PropertyGroup>
-    <ForkRevisionFile>$(MSBuildThisFileDirectory)..\FORK_REVISION</ForkRevisionFile>
-    <ForkRevision Condition="'$(ForkRevision)' == '' and Exists('$(ForkRevisionFile)')">$([System.IO.File]::ReadAllText('$(ForkRevisionFile)').Trim())</ForkRevision>
-    <InformationalVersion Condition="'$(ForkRevision)' != ''">$(Version)-fork.$(ForkRevision)</InformationalVersion>
+    <ForkVersionFile>$(MSBuildThisFileDirectory)..\FORK_VERSION</ForkVersionFile>
+    <ForkVersion Condition="'$(ForkVersion)' == '' and Exists('$(ForkVersionFile)')">$([System.IO.File]::ReadAllText('$(ForkVersionFile)').Trim())</ForkVersion>
+    <!-- Product version (the informational version) is what the app reports and
+         what the updater reads. The file version is only shown in the file's
+         properties; it carries the same number so the two never disagree. -->
+    <InformationalVersion Condition="'$(ForkVersion)' != ''">$(ForkVersion)</InformationalVersion>
+    <FileVersion Condition="'$(ForkVersion)' != ''">$(ForkVersion)</FileVersion>
   </PropertyGroup>
+  <ItemGroup Condition="'$(ForkVersion)' != ''">
+    <AssemblyMetadata Include="TokenTrackerUpdateChannel" Value="fork" />
+  </ItemGroup>
 </Project>

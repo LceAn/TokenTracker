@@ -166,8 +166,10 @@ export function MenuBarSection() {
   );
 }
 
-// Accepts "v1.5.28" and fork tags such as "v1.5.28-fork.2". Anything else is not
-// an update: a tag that cannot be parsed must never turn into a download prompt.
+// Accepts "v2.0.0" and the fork's first release, which was tagged after
+// upstream ("v1.5.29-fork.1") before the fork started its own numbering.
+// Anything else is not an update: a tag that cannot be parsed must never turn
+// into a download prompt.
 function parseReleaseVersion(value) {
   const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-fork\.(\d+))?$/.exec(
     String(value || "").trim(),
