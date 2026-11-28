@@ -60,7 +60,8 @@ dotnet test TokenTrackerWin.Tests/TokenTrackerWin.Tests.csproj -c Release   # Wi
 
 关于测试：
 
-- `npm test` 是上游的完整测试套件。其中一部分依赖数据库、符号链接或 macOS 工具链，在 Windows 上本来就通不过。判断有没有改坏东西，请对比改动前后的**失败清单**，不要只看失败数量。
+- `npm test` 是上游的完整测试套件。在 Windows 上有三十多条通不过，在纯上游代码上同样如此：有的依赖数据库、符号链接或 macOS 工具链，有的对时序、文件读写速度或机器上安装的其它软件敏感。判断有没有改坏东西，请对比改动前后的**失败清单**，不要只看失败数量；拿不准的时候，在一份纯上游的检出上跑同一个测试来对照。
+- Windows 上如果 `%TEMP%` 所在的盘写入很慢（例如安全软件会扫描每个新文件），带时间预算的用例可能超时。把测试用的临时目录指到更快的盘即可：运行前设置 `TMP` 和 `TEMP` 环境变量。
 - 上游的两条规则：用户可见的文案一律登记在 `dashboard/src/content/copy.csv`，不写在组件里；`zh` 和 `zh-TW` 的覆盖率必须达到 100%。
 
 ### 提交约定
@@ -97,13 +98,12 @@ dotnet test TokenTrackerWin.Tests/TokenTrackerWin.Tests.csproj -c Release
    - `desktop/test/` 下读取 `.github/workflows/` 的 8 个测试；
    - `desktop/test/`、`desktop/scripts/` 下读取 `server/migrations/` 的约 28 个文件；
    - `desktop/test/` 下调用 `server/self-host/` 的 3 个文件；
-   - `server/self-host/` 下的 `manifest.cjs`、`build-functions.cjs`、`acceptance.cjs`；
+   - `server/self-host/` 下的 `manifest.cjs`、`build-functions.cjs`、`acceptance.cjs`（`manifest.cjs` 里保留 `readMigration` 和 `readOwn` 的写法）；
    - `server/cloudflare/worker/` 下指向 `desktop/` 的十来个文件；
    - `server/docs/`、`desktop/docs/` 里跨目录的链接；
    - `.gitignore`、`.github/dependabot.yml`。
-3. 上游从 v1.5.31 起更换了后端。同步到这些版本之前，要先适配「切换服务器」这个功能。
 
-重组之后做过一次试合并（上游 v1.5.29 到 v1.5.33）：重组前没有冲突；重组后只有一个真正的冲突，是 `server/self-host/manifest.cjs`，上游和本分支都改了它。
+重组之后的第一次同步是 2026-11-28 的 v1.5.29 → v1.5.34：上游的 98 处改动全部自动落位，13 个新增文件进了 `desktop/`，唯一的冲突是 `server/self-host/manifest.cjs`。
 
 ### 发布 Windows 版
 
@@ -179,7 +179,8 @@ dotnet test TokenTrackerWin.Tests/TokenTrackerWin.Tests.csproj -c Release   # Wi
 
 About the tests:
 
-- `npm test` is upstream's full suite. Part of it needs a database, symbolic links or the macOS toolchain, and cannot pass on Windows in the first place. To tell whether you broke something, compare the **list of failing tests** before and after your change, not the number.
+- `npm test` is upstream's full suite. A few dozen of its tests cannot pass on Windows, and they fail the same way on pristine upstream: some need a database, symbolic links or the macOS toolchain; some are sensitive to timing, to file-write speed, or to other software installed on the machine. To tell whether you broke something, compare the **list of failing tests** before and after your change, not the number. When in doubt, run the same test on a pristine checkout of upstream and compare.
+- On Windows, when writes to the `%TEMP%` drive are slow (for example because security software scans every new file), tests with a time budget can time out. Point the test scratch space at a faster drive by setting the `TMP` and `TEMP` environment variables before the run.
 - Two upstream rules: user-visible text lives in `dashboard/src/content/copy.csv`, never in a component; `zh` and `zh-TW` coverage must be 100%.
 
 ### Commit conventions
@@ -216,13 +217,12 @@ When there are conflicts:
    - the 8 tests under `desktop/test/` that read `.github/workflows/`;
    - the 28 or so files under `desktop/test/` and `desktop/scripts/` that read `server/migrations/`;
    - the 3 files under `desktop/test/` that call into `server/self-host/`;
-   - `manifest.cjs`, `build-functions.cjs` and `acceptance.cjs` under `server/self-host/`;
+   - `manifest.cjs`, `build-functions.cjs` and `acceptance.cjs` under `server/self-host/` (in `manifest.cjs`, keep the `readMigration` and `readOwn` spelling);
    - the dozen or so files under `server/cloudflare/worker/` that import from `desktop/`;
    - the cross-folder links in `server/docs/` and `desktop/docs/`;
    - `.gitignore` and `.github/dependabot.yml`.
-3. Upstream switched its backend from v1.5.31. Before syncing to those versions, the server switch needs adapting.
 
-A trial merge was done right after the restructure (upstream v1.5.29 to v1.5.33). Before the restructure it had no conflicts. After it, the only real conflict was `server/self-host/manifest.cjs`, which both upstream and this fork had changed.
+The first sync after the restructure was v1.5.29 → v1.5.34 on 2026-11-28. All 98 of upstream's changes landed by themselves, its 13 new files went into `desktop/`, and the only conflict was `server/self-host/manifest.cjs`.
 
 ### Releasing the Windows build
 

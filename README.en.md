@@ -28,7 +28,7 @@ When the official cloud became a paid subscription, users who wanted cloud sync 
 | **About page** | Settings → App → About: project introduction, version, license and contributors. |
 | **Server deployment guide** | A new [`server/README.md`](server/README.md) (English: [`server/README.en.md`](server/README.en.md)): how to deploy your own cloud, and how to point a client at it. |
 
-The first four and the About page were submitted upstream as PRs ([#1082](https://github.com/xiufengsun/TokenTracker/pull/1082), [#1084](https://github.com/xiufengsun/TokenTracker/pull/1084), [#1085](https://github.com/xiufengsun/TokenTracker/pull/1085), [#1086](https://github.com/xiufengsun/TokenTracker/pull/1086), [#1081](https://github.com/xiufengsun/TokenTracker/pull/1081)). They pass their tests and were reworked after review; as of 2026-11-27 none had been merged. Check the PR pages for the current state.
+The first four and the About page were submitted upstream as PRs ([#1082](https://github.com/xiufengsun/TokenTracker/pull/1082), [#1084](https://github.com/xiufengsun/TokenTracker/pull/1084), [#1085](https://github.com/xiufengsun/TokenTracker/pull/1085), [#1086](https://github.com/xiufengsun/TokenTracker/pull/1086), [#1081](https://github.com/xiufengsun/TokenTracker/pull/1081)). They pass their tests and were reworked after review; as of 2026-11-28 none had been merged. Check the PR pages for the current state.
 
 ## Download
 

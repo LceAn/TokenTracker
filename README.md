@@ -28,7 +28,7 @@ Token Tracker 是一个本地优先的 AI 用量统计工具。它读取你电�
 | **「关于」页面** | 「设置 → 应用 → 关于」：项目介绍、版本、许可证和贡献者。 |
 | **服务端部署指南** | 新增 [`server/README.md`](server/README.md)：怎样部署自己的云端，客户端怎样连上去。 |
 
-前四项和「关于」页面已经作为 PR 提交给上游（[#1082](https://github.com/xiufengsun/TokenTracker/pull/1082)、[#1084](https://github.com/xiufengsun/TokenTracker/pull/1084)、[#1085](https://github.com/xiufengsun/TokenTracker/pull/1085)、[#1086](https://github.com/xiufengsun/TokenTracker/pull/1086)、[#1081](https://github.com/xiufengsun/TokenTracker/pull/1081)），通过了测试并按评审意见返工过；截至 2026-11-27 还没有合并，是否已合并请以上游页面为准。
+前四项和「关于」页面已经作为 PR 提交给上游（[#1082](https://github.com/xiufengsun/TokenTracker/pull/1082)、[#1084](https://github.com/xiufengsun/TokenTracker/pull/1084)、[#1085](https://github.com/xiufengsun/TokenTracker/pull/1085)、[#1086](https://github.com/xiufengsun/TokenTracker/pull/1086)、[#1081](https://github.com/xiufengsun/TokenTracker/pull/1081)），通过了测试并按评审意见返工过；截至 2026-11-28 还没有合并，是否已合并请以上游页面为准。
 
 ## 下载
 

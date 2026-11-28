@@ -70,7 +70,8 @@ psql --set ON_ERROR_STOP=1 --file /absolute/private/path/tokentracker-install.sq
 - Run it as the database owner, in a new application database. Use the server's protected connection configuration; do not put passwords on the command line. The file carries its own transaction and install lock.
 - Do not run every migration in `migrations/`: the history contains operator-specific fixes for the official user base.
 - The installation is recorded in `tokentracker_self_host_installations` (each step with its SHA-256). Running the unchanged installer again preserves users, tokens and usage; a step whose content changed fails explicitly instead of replacing an installation silently.
-- The last step sets the instance to `hosting_mode='self_hosted'`: private sync is free, with no device quota or history window, and no paid orders are created.
+- The manifest has 16 steps; upstream added `14-usage-cost-provenance` (where a usage cost came from) in v1.5.34. When the installer runs again on an instance set up from the previous manifest, steps whose content did not change are skipped and only the new step is added.
+- After the manifest, the installer sets the instance to `hosting_mode='self_hosted'`: private sync is free, with no device quota or history window, and no paid orders are created.
 
 If your InsForge instance is already linked through its CLI, you can go through the platform's migration API instead (`--migration`); see [docs/self-hosting-backend.md](docs/self-hosting-backend.md).
 
@@ -166,9 +167,14 @@ These come from a real self-hosted deployment, recorded in a comment on upstream
 - If you want OAuth or email sign-in: configure the instance's own provider and verify it.
 - Of the problems in the notes above, this fork has so far only documented them; none is fixed in code yet.
 
-## About the Cloudflare Worker backend
+## Where the official cloud and a self-hosted instance send data now
 
-`cloudflare/` is the official hosted cloud's newer backend, which upstream made primary from v1.5.31. It is tied to upstream's accounts, payments, public leaderboard and official domain, and is not supported for self-hosting. The server switch in this fork also targets InsForge instances. When this fork syncs to upstream v1.5.31 or later, that part needs rework, and this page will be updated then.
+From v1.5.31 upstream moved the official account backend to the Cloudflare Worker; this fork is synced to v1.5.34. The client picks the destination from the selected address:
+
+- **The official address**: the signed-in session migrates to Cloudflare, and reads and uploads go to `https://api.tokentracker.cc`.
+- **A self-hosted instance's address**: nothing migrates; reads and uploads go to the instance's own address with its anon key, and the dashboard does not read from Cloudflare.
+
+So after picking a self-hosted server in Settings, no data goes to the official backend. `cloudflare/` is the source of the official cloud's backend. It is tied to upstream's accounts, payments, public leaderboard and official domain, and is **not supported for self-hosting**. The server switch in this fork targets InsForge instances.
 
 ## Related documents
 
