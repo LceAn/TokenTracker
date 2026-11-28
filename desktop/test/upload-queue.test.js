@@ -203,6 +203,9 @@ test("drain time budget aborts a stalled request and preserves previous successf
   global.fetch = async (_url, options) => {
     requests += 1;
     if (requests === 1) return { ok: true, text: async () => JSON.stringify({ inserted: 1, next_allowed_at: "2026-10-12T01:00:00Z" }) };
+    // Like the real fetch: a request whose signal expired before it started
+    // fails at once instead of waiting for an abort event that already happened.
+    if (options.signal?.aborted) throw options.signal.reason;
     return new Promise((_resolve, reject) => options.signal.addEventListener("abort", () => reject(options.signal.reason), { once: true }));
   };
   // AbortSignal.timeout does not keep Node alive by itself.
